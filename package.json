@@ -8,7 +8,7 @@
     "start": "node server/server.cjs",
     "frontend": "vite --host --port 5173",
     "backend": "node server/server.cjs",
-    "build": "vite build",
+    "build": "npx vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
