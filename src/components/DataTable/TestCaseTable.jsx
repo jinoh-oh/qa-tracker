@@ -1,0 +1,262 @@
+import React, { useState, useContext } from 'react';
+import './TestCaseTable.css';
+import { Link } from 'react-router-dom';
+import { FileEdit, Save, X, Trash2, CheckSquare, Copy } from 'lucide-react';
+import { AppContext } from '../../context/AppContext';
+
+function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
+  const { depthOptions } = useContext(AppContext);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  const handleEditClick = (tc) => {
+    setEditingId(tc.tc_id);
+    setEditForm({ ...tc });
+  };
+
+  const handleCancelClick = () => {
+    setEditingId(null);
+  };
+
+  const handleSaveClick = () => {
+    if (onUpdate) onUpdate(editingId, editForm);
+    setEditingId(null);
+  };
+
+  const handleChange = (e, field) => {
+    setEditForm({ ...editForm, [field]: e.target.value });
+  };
+
+  const toggleSelect = (id) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(v => v !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  const toggleSelectAll = (e) => {
+    if (e.target.checked) setSelectedIds(data.map(tc => tc.tc_id));
+    else setSelectedIds([]);
+  };
+
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) return;
+    setConfirmBulkDelete(true);
+  };
+
+  const executeBulkDelete = () => {
+    if (onBulkDelete) onBulkDelete(selectedIds);
+    setSelectedIds([]);
+    setConfirmBulkDelete(false);
+  };
+
+  const getPriorityBadge = (priority) => {
+    if (priority === 'P1') return <span className="badge priority-p1">P1</span>;
+    if (priority === 'P2') return <span className="badge priority-p2">P2</span>;
+    if (priority === 'P3') return <span className="badge priority-p3">P3</span>;
+    return <span className="badge">{priority}</span>;
+  };
+
+  const getResultBadge = (result) => {
+    if (result === 'Pass') return <span className="badge result-pass">Pass</span>;
+    if (result === 'Fail') return <span className="badge result-fail">Fail</span>;
+    if (result === 'Blocked') return <span className="badge result-blocked">Blocked</span>;
+    if (result === 'N/A') return <span className="badge result-na">N/A</span>;
+    return <span>{result || '-'}</span>;
+  };
+
+  const allUniqueDepths = depthOptions || [];
+
+  const DepthSelect = ({ value, onChange, name }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    return (
+      <div style={{position:'relative'}} className="depth-combo-wrapper">
+        <input 
+          value={value || ''} 
+          onChange={onChange}
+          onClick={() => setIsOpen(true)}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+          className="edit-input w-80"
+          placeholder="선택/입력"
+        />
+        <div 
+          style={{position:'absolute', right:6, top:6, cursor:'pointer', color:'#a0aec0', fontSize:'10px'}} 
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          ▼
+        </div>
+        {isOpen && (
+          <div style={{position:'absolute', top:'100%', left:0, width:'120%', background:'white', border:'1px solid var(--border)', zIndex:999, maxHeight:'200px', overflowY:'auto', boxShadow:'0 4px 6px rgba(0,0,0,0.1)', borderRadius:'4px', marginTop:'2px'}}>
+             {allUniqueDepths.map(opt => (
+               <div 
+                 key={opt} 
+                 style={{padding:'6px 12px', cursor:'pointer', borderBottom:'1px solid #f0f0f0', backgroundColor: opt === value ? '#ebf8ff' : 'white', fontSize:'13px'}} 
+                 onMouseDown={(e) => { e.preventDefault(); onChange({target:{value: opt}}); setIsOpen(false); }}
+                 onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f7fafc'}
+                 onMouseLeave={e => e.currentTarget.style.backgroundColor = opt === value ? '#ebf8ff' : 'white'}
+               >
+                 {opt}
+               </div>
+             ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const DepthBadge = ({ val }) => (
+    val ? <span className="depth-badge">{val}</span> : <span>-</span>
+  );
+
+  if (!data || data.length === 0) {
+    return <div className="no-data">해당 모듈의 등록된 TC가 없습니다.</div>;
+  }
+
+  return (
+    <div className="table-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: 0 }}>
+      {selectedIds.length > 0 && (
+        <div className="table-toolbar" style={{ flexShrink: 0 }}>
+          <span className="selected-count">{selectedIds.length}개 선택됨</span>
+          <button className="btn btn-outline btn-danger" onClick={handleBulkDelete}>
+            <Trash2 size={16} style={{marginRight:'4px'}}/> 선택 삭제
+          </button>
+        </div>
+      )}
+      <div className="table-wrapper" style={{ flex: 1, overflow: 'auto' }}>
+        <table className="tc-table">
+          <thead>
+            <tr>
+              <th className="sticky-col checkbox-col">
+                <input type="checkbox" onChange={toggleSelectAll} checked={selectedIds.length === data.length && data.length > 0} />
+              </th>
+              <th className="sticky-col">NO</th>
+              <th className="sticky-col-tc">TC_ID</th>
+              <th>1 Depth</th>
+              <th>2 Depth</th>
+              <th>3 Depth</th>
+              <th>4 Depth</th>
+              <th>Test Scenario</th>
+              <th>Priority</th>
+              <th>Pre-condition</th>
+              <th>Procedure</th>
+              <th>Expected Result</th>
+              <th>Result</th>
+              <th>Comment</th>
+              <th>Tester</th>
+              <th>Test Date</th>
+              <th>TC Type</th>
+              <th>Defect ID</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((tc, index) => (
+              <tr key={tc.tc_id || index} className={selectedIds.includes(tc.tc_id) ? 'row-selected' : ''}>
+                <td className="sticky-col checkbox-col">
+                  <input type="checkbox" checked={selectedIds.includes(tc.tc_id)} onChange={() => toggleSelect(tc.tc_id)} />
+                </td>
+                <td className="sticky-col">{index + 1}</td>
+                
+                {editingId === tc.tc_id ? (
+                  <>
+                    <td className="sticky-col-tc"><input type="text" value={editForm.tc_id} onChange={(e) => handleChange(e, 'tc_id')} className="edit-input" /></td>
+                    <td><DepthSelect value={editForm.depth1} onChange={(e) => handleChange(e, 'depth1')} name={`d1-${tc.tc_id || ''}`} /></td>
+                    <td><DepthSelect value={editForm.depth2} onChange={(e) => handleChange(e, 'depth2')} name={`d2-${tc.tc_id || ''}`} /></td>
+                    <td><DepthSelect value={editForm.depth3} onChange={(e) => handleChange(e, 'depth3')} name={`d3-${tc.tc_id || ''}`} /></td>
+                    <td><DepthSelect value={editForm.depth4} onChange={(e) => handleChange(e, 'depth4')} name={`d4-${tc.tc_id || ''}`} /></td>
+                    <td><textarea value={editForm.scenario} onChange={(e) => handleChange(e, 'scenario')} className="edit-input expected-text" /></td>
+                    <td>
+                      <select value={editForm.priority} onChange={(e) => handleChange(e, 'priority')} className="edit-input w-80">
+                        <option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option>
+                      </select>
+                    </td>
+                    <td><textarea value={editForm.precondition} onChange={(e) => handleChange(e, 'precondition')} className="edit-input expected-text" /></td>
+                    <td><textarea value={editForm.procedure} onChange={(e) => handleChange(e, 'procedure')} className="edit-input expected-text" /></td>
+                    <td><textarea value={editForm.expected} onChange={(e) => handleChange(e, 'expected')} className="edit-input expected-text" /></td>
+                    <td>
+                      <select value={editForm.result} onChange={(e) => handleChange(e, 'result')} className="edit-input w-80">
+                        <option value="Pass">Pass</option><option value="Fail">Fail</option><option value="Blocked">Blocked</option><option value="N/A">N/A</option><option value="">-</option>
+                      </select>
+                    </td>
+                    <td><textarea value={editForm.comment} onChange={(e) => handleChange(e, 'comment')} className="edit-input expected-text" /></td>
+                    <td><input type="text" value={editForm.tester || ''} onChange={(e) => handleChange(e, 'tester')} className="edit-input w-80" /></td>
+                    <td><input type="date" value={editForm.date || ''} onChange={(e) => handleChange(e, 'date')} className="edit-input" /></td>
+                    <td>
+                      <select value={editForm.type} onChange={(e) => handleChange(e, 'type')} className="edit-input w-80">
+                        <option value="COM">COM</option><option value="BIZ">BIZ</option>
+                      </select>
+                    </td>
+                    <td><input type="text" value={editForm.defect_id || ''} onChange={(e) => handleChange(e, 'defect_id')} className="edit-input w-80" /></td>
+                    
+                    <td>
+                      <div className="action-buttons">
+                        <button className="btn-icon save" onClick={handleSaveClick} title="Save"><Save size={16} /></button>
+                        <button className="btn-icon cancel" onClick={handleCancelClick} title="Cancel"><X size={16} /></button>
+                      </div>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="sticky-col-tc fw-500">{tc.tc_id}</td>
+                    <td><DepthBadge val={tc.depth1} /></td>
+                    <td><DepthBadge val={tc.depth2} /></td>
+                    <td><DepthBadge val={tc.depth3} /></td>
+                    <td><DepthBadge val={tc.depth4} /></td>
+                    <td className="min-w-200">{tc.scenario}</td>
+                    <td>{getPriorityBadge(tc.priority)}</td>
+                    <td className="pre-wrap min-w-150">{tc.precondition}</td>
+                    <td className="pre-wrap min-w-250">{tc.procedure}</td>
+                    <td className="pre-wrap min-w-250">{tc.expected}</td>
+                    <td>{getResultBadge(tc.result)}</td>
+                    <td className="pre-wrap min-w-150">{tc.comment}</td>
+                    <td>{tc.tester}</td>
+                    <td>{tc.date}</td>
+                    <td>{tc.type}</td>
+                    <td>
+                      {tc.defect_id ? (
+                        <Link to={`/defects?defectId=${tc.defect_id}`} style={{ color: '#3182ce', textDecoration: 'underline', fontWeight: 500 }}>
+                          {tc.defect_id}
+                        </Link>
+                      ) : (
+                        ''
+                      )}
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button className="btn-icon edit" onClick={() => handleEditClick(tc)} title="Edit"><FileEdit size={16} /></button>
+                        {onCopy && <button className="btn-icon copy" style={{color: '#718096'}} onClick={() => onCopy(tc)} title="Copy"><Copy size={16} /></button>}
+                        <button className="btn-icon trash" onClick={() => { if(window.confirm('삭제하시겠습니까?')) onDelete(tc.tc_id); }} title="Delete"><Trash2 size={16} /></button>
+                      </div>
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {confirmBulkDelete && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div className="modal-content" style={{ background: 'white', padding: '24px', borderRadius: '8px', width: '400px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+             <h3 className="modal-title" style={{ marginTop: 0 }}>선택 삭제 확인</h3>
+             <p>선택한 {selectedIds.length}개의 테스트 케이스를 영구적으로 삭제하시겠습니까?</p>
+             <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '24px' }}>
+               <button className="btn btn-outline" onClick={() => setConfirmBulkDelete(false)}>취소</button>
+               <button className="btn btn-primary" style={{ backgroundColor: '#e53e3e', borderColor: '#e53e3e' }} onClick={executeBulkDelete}>삭제하기</button>
+             </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+export default TestCaseTable;

@@ -1,0 +1,38 @@
+.add-module-form-settings {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.add-module-form-settings input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.module-sort-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.module-sort-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background-color: var(--bg-color);
+}
+.module-info strong {
+  color: var(--primary);
+}
+.module-actions {
+  display: flex;
+  gap: 8px;
+}
+.module-actions button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
