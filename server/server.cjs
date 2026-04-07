@@ -23,6 +23,7 @@ mongoose.connect(MONGODB_URI)
 // Single Schema for entire App Data (Legacy Sync Pattern Compatibility)
 const AppDataSchema = new mongoose.Schema({
   testCasesData: { type: Object, default: {} },
+  screenRulesData: { type: Object, default: {} }, // Added for SCREEN_RULE persistence
   modules: { type: Array, default: [] },
   accounts: { type: Array, default: [] },
   defectsData: { type: Array, default: [] },

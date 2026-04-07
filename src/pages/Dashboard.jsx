@@ -222,7 +222,7 @@ function Dashboard() {
                     <th style={{textAlign: 'center'}}>Fail</th>
                     <th style={{textAlign: 'center'}}>N/A</th>
                     <th style={{textAlign: 'center'}}>Blocked</th>
-                    <th style={{textAlign: 'center'}}>진행률</th>
+                    <th style={{textAlign: 'center', width: '230px'}}>진행률</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -236,10 +236,12 @@ function Dashboard() {
                         <td className="text-fail fw-bold" style={{textAlign: 'center'}}>{row.fail}</td>
                         <td className="text-muted" style={{textAlign: 'center'}}>{row.na}</td>
                         <td className="text-warning fw-bold" style={{textAlign: 'center'}}>{row.blocked}</td>
-                        <td>
-                          <div className="progress-bar-container" style={{justifyContent: 'center'}}>
-                            <div className="progress-bar" style={{ width: `${row.progress}%`, minWidth: row.progress > 0 ? '10%' : '2px' }}></div>
-                            <span style={{minWidth: '35px', textAlign: 'right'}}>{row.progress}%</span>
+                        <td style={{textAlign: 'center'}}>
+                          <div className="progress-bar-container">
+                            <div className="progress-track">
+                              <div className="progress-bar" style={{ width: `${row.progress}%` }}></div>
+                            </div>
+                            <span className="progress-text">{row.progress}%</span>
                           </div>
                         </td>
                       </tr>

@@ -14,6 +14,7 @@ export const AppProvider = ({ children }) => {
   const [defectsData, setDefectsData] = useState([]);
   const [notificationsData, setNotificationsData] = useState([]);
   const [depthOptions, setDepthOptions] = useState([]);
+  const [screenRulesData, setScreenRulesData] = useState({ columns: [], rows: [] });
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Determine API Base: relative path for same-origin production, or localhost for cross-origin dev
@@ -39,6 +40,7 @@ export const AppProvider = ({ children }) => {
         setDefectsData(data.defectsData || []);
         setNotificationsData(data.notificationsData || []);
         setDepthOptions(data.depthOptions || []);
+        setScreenRulesData(data.screenRulesData && data.screenRulesData.columns ? data.screenRulesData : { columns: [], rows: [] });
       } catch (err) {
         console.warn('Backend server not connected. Falling back to local storage...', err);
         const getLocal = (key, def) => {
@@ -69,6 +71,7 @@ export const AppProvider = ({ children }) => {
         setDefectsData(getLocal('qms_defects', []));
         setNotificationsData(getLocal('qms_notifications', []));
         setDepthOptions(getLocal('qms_depth_options', ['공통', '로그인', '로그인화면', '전세', '리스트', '기본검색', '상세검색', '등록', '조회', '저장']));
+        setScreenRulesData(getLocal('qms_screen_rules', { columns: [], rows: [] }));
       } finally {
         setIsLoaded(true);
       }
@@ -91,7 +94,8 @@ export const AppProvider = ({ children }) => {
             accounts,
             defectsData,
             notificationsData,
-            depthOptions
+            depthOptions,
+            screenRulesData
           })
         });
         
@@ -103,6 +107,7 @@ export const AppProvider = ({ children }) => {
            localStorage.setItem('qms_defects', JSON.stringify(defectsData));
            localStorage.setItem('qms_notifications', JSON.stringify(notificationsData));
            localStorage.setItem('qms_depth_options', JSON.stringify(depthOptions));
+           localStorage.setItem('qms_screen_rules', JSON.stringify(screenRulesData));
         }
       } catch (err) {
         // If sync fails (server down), keep using local storage as backup
@@ -112,12 +117,13 @@ export const AppProvider = ({ children }) => {
         localStorage.setItem('qms_defects', JSON.stringify(defectsData));
         localStorage.setItem('qms_notifications', JSON.stringify(notificationsData));
         localStorage.setItem('qms_depth_options', JSON.stringify(depthOptions));
+        localStorage.setItem('qms_screen_rules', JSON.stringify(screenRulesData));
       }
     };
 
     const timer = setTimeout(sync, 1000); 
     return () => clearTimeout(timer);
-  }, [testCasesData, modules, accounts, defectsData, notificationsData, depthOptions, isLoaded]);
+  }, [testCasesData, modules, accounts, defectsData, notificationsData, depthOptions, screenRulesData, isLoaded]);
 
   // Persist current user in local storage only (not shared)
   useEffect(() => {
@@ -209,6 +215,10 @@ export const AppProvider = ({ children }) => {
 
   const isOtherUser = (targetName) => {
     return user && targetName && String(targetName).trim() !== String(user.name).trim();
+  };
+
+  const updateScreenRules = (newData) => {
+    setScreenRulesData(newData);
   };
 
   const addTestCase = (moduleName, newTc) => {
@@ -375,6 +385,8 @@ export const AppProvider = ({ children }) => {
       updateDefect,
       deleteDefect,
       bulkDeleteDefects,
+      screenRulesData,
+      updateScreenRules,
       markAsRead,
       markAllAsRead,
       isLoaded

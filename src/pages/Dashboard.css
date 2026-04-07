@@ -121,12 +121,31 @@
 .progress-bar-container {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  width: 180px;
+  margin: 0 auto;
+}
+
+.progress-track {
+  flex: 1;
+  height: 8px;
+  background-color: #f1f5f9;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .progress-bar {
-  height: 6px;
+  height: 100%;
   background-color: #3182ce;
-  border-radius: 3px;
-  min-width: 2px;
+  border-radius: 4px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-text {
+  min-width: 40px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
 }
