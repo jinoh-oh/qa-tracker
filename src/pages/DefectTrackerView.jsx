@@ -6,7 +6,7 @@ import { Plus, Search } from 'lucide-react';
 // Reusing some base CSS from TestCaseView if applicable, or inline styling.
 
 function DefectTrackerView() {
-  const { defectsData, addDefect, updateDefect, deleteDefect, bulkDeleteDefects } = useContext(AppContext);
+  const { defectsData, addDefect, updateDefect, deleteDefect, bulkDeleteDefects, isReadOnly } = useContext(AppContext);
   const [searchParams] = useSearchParams();
   const searchId = searchParams.get('defectId');
 
@@ -90,9 +90,11 @@ function DefectTrackerView() {
               style={{ padding: '8px 12px 8px 32px', borderRadius: '4px', border: '1px solid #cbd5e0', fontSize: '13px', width: '250px' }}
             />
           </div>
-          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-            <Plus size={16} style={{marginRight: '6px'}} /> 결함 신규 등록
-          </button>
+          {!isReadOnly && (
+            <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+              <Plus size={16} style={{marginRight: '6px'}} /> 결함 신규 등록
+            </button>
+          )}
         </div>
       </div>
 

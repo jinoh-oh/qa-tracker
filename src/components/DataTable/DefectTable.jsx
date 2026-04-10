@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import './DefectTable.css';
 import { FileEdit, Save, X, Trash2, Copy } from 'lucide-react';
+import { AppContext } from '../../context/AppContext';
 
 function DefectTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
+  const { isReadOnly } = useContext(AppContext);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [selectedIds, setSelectedIds] = useState([]);
@@ -86,9 +88,11 @@ function DefectTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
         <table className="df-table">
           <thead>
             <tr>
-              <th className="df-sticky-col df-checkbox-col">
-                <input type="checkbox" onChange={toggleSelectAll} checked={selectedIds.length === data.length && data.length > 0} />
-              </th>
+              {!isReadOnly && (
+                <th className="df-sticky-col df-checkbox-col">
+                  <input type="checkbox" onChange={toggleSelectAll} checked={selectedIds.length === data.length && data.length > 0} />
+                </th>
+              )}
               <th className="df-sticky-col">NO</th>
               <th className="df-sticky-id">Defect_ID</th>
               <th>TC_ID</th>
@@ -101,7 +105,7 @@ function DefectTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
               <th>Reporter</th>
               <th>Date</th>
               <th>Comment</th>
-              <th>Action</th>
+              {!isReadOnly && <th>Action</th>}
             </tr>
           </thead>
           <tbody>
@@ -111,9 +115,11 @@ function DefectTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
               const isSelected = selectedIds.includes(uid);
               return (
               <tr key={uid || index} className={isSelected ? 'row-selected' : ''}>
-                <td className="df-sticky-col df-checkbox-col">
-                  <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(uid)} />
-                </td>
+                {!isReadOnly && (
+                  <td className="df-sticky-col df-checkbox-col">
+                    <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(uid)} />
+                  </td>
+                )}
                 <td className="df-sticky-col">{index + 1}</td>
                 
                 {isEditing ? (
@@ -137,12 +143,14 @@ function DefectTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                     <td><input type="text" value={editForm.reporter} onChange={e => handleChange(e, 'reporter')} className="edit-input df-w-100" /></td>
                     <td><input type="date" value={editForm.date} onChange={e => handleChange(e, 'date')} className="edit-input" /></td>
                     <td><textarea value={editForm.comment} onChange={e => handleChange(e, 'comment')} className="edit-input expected-text df-min-150" /></td>
-                    <td>
-                      <div className="action-buttons">
-                        <button className="btn-icon save" onClick={handleSaveClick} title="Save"><Save size={16} /></button>
-                        <button className="btn-icon cancel" onClick={handleCancelClick} title="Cancel"><X size={16} /></button>
-                      </div>
-                    </td>
+                    {!isReadOnly && (
+                      <td>
+                        <div className="action-buttons">
+                          <button className="btn-icon save" onClick={handleSaveClick} title="Save"><Save size={16} /></button>
+                          <button className="btn-icon cancel" onClick={handleCancelClick} title="Cancel"><X size={16} /></button>
+                        </div>
+                      </td>
+                    )}
                   </>
                 ) : (
                   <>
@@ -157,13 +165,15 @@ function DefectTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                     <td>{df.reporter}</td>
                     <td>{df.date}</td>
                     <td className="df-min-150 df-pre-wrap">{df.comment}</td>
-                    <td>
-                      <div className="action-buttons">
-                        <button className="btn-icon edit" onClick={() => handleEditClick(df)} title="Edit"><FileEdit size={16} /></button>
-                        {onCopy && <button className="btn-icon copy" style={{color: '#718096'}} onClick={() => onCopy(df)} title="Copy"><Copy size={16} /></button>}
-                        <button className="btn-icon trash" onClick={() => { if(window.confirm('결함을 삭제하시겠습니까?')) onDelete(df.defect_id); }} title="Delete"><Trash2 size={16} /></button>
-                      </div>
-                    </td>
+                    {!isReadOnly && (
+                      <td>
+                        <div className="action-buttons">
+                          <button className="btn-icon edit" onClick={() => handleEditClick(df)} title="Edit"><FileEdit size={16} /></button>
+                          {onCopy && <button className="btn-icon copy" style={{color: '#718096'}} onClick={() => onCopy(df)} title="Copy"><Copy size={16} /></button>}
+                          <button className="btn-icon trash" onClick={() => { if(window.confirm('결함을 삭제하시겠습니까?')) onDelete(df.defect_id); }} title="Delete"><Trash2 size={16} /></button>
+                        </div>
+                      </td>
+                    )}
                   </>
                 )}
               </tr>

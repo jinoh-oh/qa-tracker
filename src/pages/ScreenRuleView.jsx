@@ -3,9 +3,10 @@ import DynamicTable from '../components/DataTable/DynamicTable';
 import { AppContext } from '../context/AppContext';
 
 function ScreenRuleView() {
-  const { screenRulesData, updateScreenRules } = useContext(AppContext);
+  const { screenRulesData, updateScreenRules, isReadOnly } = useContext(AppContext);
 
   const handleDataChange = (newData) => {
+    if (isReadOnly) return;
     updateScreenRules(newData);
   };
 
@@ -18,6 +19,7 @@ function ScreenRuleView() {
         columns={screenRulesData?.columns} 
         rows={screenRulesData?.rows} 
         onDataChange={handleDataChange}
+        isReadOnly={isReadOnly}
       />
     </div>
   );

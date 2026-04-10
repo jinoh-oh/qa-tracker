@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, User } from 'lucide-react';
 import './LoginView.css';
 
 function LoginView() {
@@ -16,6 +16,10 @@ function LoginView() {
     if (!success) {
       setErrorMsg('아이디 또는 비밀번호가 올바르지 않습니다.');
     }
+  };
+
+  const handleGuestLogin = () => {
+    login('guest', 'guest');
   };
 
   return (
@@ -50,6 +54,14 @@ function LoginView() {
           </div>
           <button type="submit" className="login-btn">로그인</button>
         </form>
+
+        <div className="login-divider">
+          <span>또는</span>
+        </div>
+
+        <button type="button" className="guest-login-btn" onClick={handleGuestLogin}>
+          <User size={18} /> 게스트로 로그인 (읽기 전용)
+        </button>
       </div>
     </div>
   );

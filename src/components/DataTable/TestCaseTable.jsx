@@ -5,7 +5,7 @@ import { FileEdit, Save, X, Trash2, CheckSquare, Copy } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
 
 function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
-  const { depthOptions } = useContext(AppContext);
+  const { depthOptions, isReadOnly } = useContext(AppContext);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [selectedIds, setSelectedIds] = useState([]);
@@ -132,9 +132,11 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
         <table className="tc-table">
           <thead>
             <tr>
-              <th className="sticky-col checkbox-col">
-                <input type="checkbox" onChange={toggleSelectAll} checked={selectedIds.length === data.length && data.length > 0} />
-              </th>
+              {!isReadOnly && (
+                <th className="sticky-col checkbox-col">
+                  <input type="checkbox" onChange={toggleSelectAll} checked={selectedIds.length === data.length && data.length > 0} />
+                </th>
+              )}
               <th className="sticky-col">NO</th>
               <th className="sticky-col-tc">TC_ID</th>
               <th>1 Depth</th>
@@ -152,15 +154,17 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
               <th>Test Date</th>
               <th>TC Type</th>
               <th>Defect ID</th>
-              <th>Action</th>
+              {!isReadOnly && <th>Action</th>}
             </tr>
           </thead>
           <tbody>
             {data.map((tc, index) => (
               <tr key={tc.tc_id || index} className={selectedIds.includes(tc.tc_id) ? 'row-selected' : ''}>
-                <td className="sticky-col checkbox-col">
-                  <input type="checkbox" checked={selectedIds.includes(tc.tc_id)} onChange={() => toggleSelect(tc.tc_id)} />
-                </td>
+                {!isReadOnly && (
+                  <td className="sticky-col checkbox-col">
+                    <input type="checkbox" checked={selectedIds.includes(tc.tc_id)} onChange={() => toggleSelect(tc.tc_id)} />
+                  </td>
+                )}
                 <td className="sticky-col">{index + 1}</td>
                 
                 {editingId === tc.tc_id ? (
@@ -227,13 +231,15 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                         ''
                       )}
                     </td>
-                    <td>
-                      <div className="action-buttons">
-                        <button className="btn-icon edit" onClick={() => handleEditClick(tc)} title="Edit"><FileEdit size={16} /></button>
-                        {onCopy && <button className="btn-icon copy" style={{color: '#718096'}} onClick={() => onCopy(tc)} title="Copy"><Copy size={16} /></button>}
-                        <button className="btn-icon trash" onClick={() => { if(window.confirm('삭제하시겠습니까?')) onDelete(tc.tc_id); }} title="Delete"><Trash2 size={16} /></button>
-                      </div>
-                    </td>
+                    {!isReadOnly && (
+                      <td>
+                        <div className="action-buttons">
+                          <button className="btn-icon edit" onClick={() => handleEditClick(tc)} title="Edit"><FileEdit size={16} /></button>
+                          {onCopy && <button className="btn-icon copy" style={{color: '#718096'}} onClick={() => onCopy(tc)} title="Copy"><Copy size={16} /></button>}
+                          <button className="btn-icon trash" onClick={() => { if(window.confirm('삭제하시겠습니까?')) onDelete(tc.tc_id); }} title="Delete"><Trash2 size={16} /></button>
+                        </div>
+                      </td>
+                    )}
                   </>
                 )}
               </tr>

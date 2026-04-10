@@ -7,7 +7,7 @@ const DEFAULT_COLS = [
   '리스트 검색방식', '초기화버튼', '상세검색 날짜필드수', '상세 INFO 사용', '비고'
 ];
 
-function DynamicTable({ columns: initialColumns, rows: initialRows, onDataChange }) {
+function DynamicTable({ columns: initialColumns, rows: initialRows, onDataChange, isReadOnly }) {
   // Use props if provided, otherwise fallback to defaults or empty
   const [columns, setColumns] = useState(() => (initialColumns && initialColumns.length > 0) ? initialColumns : DEFAULT_COLS);
   const [rows, setRows] = useState(() => (initialRows && initialRows.length > 0) ? initialRows : []);
@@ -95,10 +95,12 @@ function DynamicTable({ columns: initialColumns, rows: initialRows, onDataChange
 
   return (
     <div className="dynamic-table-container">
-      <div className="dt-actions">
-        <button className="btn btn-outline" onClick={addColumn}><Plus size={16}/> 열 추가</button>
-        <button className="btn btn-primary" onClick={addRow}><Plus size={16}/> 행 추가</button>
-      </div>
+      {!isReadOnly && (
+        <div className="dt-actions">
+          <button className="btn btn-outline" onClick={addColumn}><Plus size={16}/> 열 추가</button>
+          <button className="btn btn-primary" onClick={addRow}><Plus size={16}/> 행 추가</button>
+        </div>
+      )}
       <div className="dt-wrapper">
         <table className="dt-table">
           <thead>
@@ -107,16 +109,16 @@ function DynamicTable({ columns: initialColumns, rows: initialRows, onDataChange
                 <th key={col}>
                   <div className="th-content">
                     <span 
-                      style={{cursor: 'text'}}
-                      onClick={() => handleRenameColumn(col)}
+                      style={{cursor: isReadOnly ? 'default' : 'text'}}
+                      onClick={() => !isReadOnly && handleRenameColumn(col)}
                     >
                       {col}
                     </span>
-                    <button className="btn-icon danger-icon" onClick={() => removeColumn(col)} title="열 삭제"><Trash2 size={12}/></button>
+                    {!isReadOnly && <button className="btn-icon danger-icon" onClick={() => removeColumn(col)} title="열 삭제"><Trash2 size={12}/></button>}
                   </div>
                 </th>
               ))}
-              <th style={{ width: '50px' }}>삭제</th>
+              {!isReadOnly && <th style={{ width: '50px' }}>삭제</th>}
             </tr>
           </thead>
           <tbody>
@@ -126,7 +128,7 @@ function DynamicTable({ columns: initialColumns, rows: initialRows, onDataChange
                   const isEditing = editingCell?.rowId === row.id && editingCell?.colName === col;
                   return (
                     <td key={col} 
-                        onClick={() => { if(!isEditing) startEdit(row.id, col, row.data[col]); }}
+                        onClick={() => { if(!isReadOnly && !isEditing) startEdit(row.id, col, row.data[col]); }}
                         className={isEditing ? 'editing-td' : ''}>
                       {isEditing ? (
                         <div className="edit-cell-wrapper">
@@ -144,14 +146,16 @@ function DynamicTable({ columns: initialColumns, rows: initialRows, onDataChange
                     </td>
                   );
                 })}
-                <td className="action-td">
-                  <button className="btn-icon danger-icon" onClick={() => removeRow(row.id)}><Trash2 size={14}/></button>
-                </td>
+                {!isReadOnly && (
+                  <td className="action-td">
+                    <button className="btn-icon danger-icon" onClick={() => removeRow(row.id)}><Trash2 size={14}/></button>
+                  </td>
+                )}
               </tr>
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={columns.length + 1} className="text-center text-muted" style={{padding: '30px'}}>데이터가 없습니다.</td>
+                <td colSpan={columns.length + (isReadOnly ? 0 : 1)} className="text-center text-muted" style={{padding: '30px'}}>데이터가 없습니다.</td>
               </tr>
             )}
           </tbody>

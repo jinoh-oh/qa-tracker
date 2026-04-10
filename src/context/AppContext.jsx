@@ -29,10 +29,16 @@ export const AppProvider = ({ children }) => {
         const data = await response.json();
         
         // Ensure we have at least default accounts if server returns empty
-        const finalAccounts = (data.accounts && data.accounts.length > 0) ? data.accounts : [
+        let finalAccounts = (data.accounts && data.accounts.length > 0) ? data.accounts : [
           { id: 'admin', pw: '1234', role: 'admin', name: 'System Admin' },
-          { id: 'user', pw: '1234', role: 'user', name: 'Test User' }
+          { id: 'user', pw: '1234', role: 'user', name: 'Test User' },
+          { id: 'guest', pw: 'guest', role: 'guest', name: 'Guest User' }
         ];
+
+        // Ensure guest account exists even if others exist
+        if (data.accounts && !data.accounts.find(a => a.id === 'guest')) {
+          finalAccounts = [...data.accounts, { id: 'guest', pw: 'guest', role: 'guest', name: 'Guest User' }];
+        }
 
         setTestCasesData(data.testCasesData || {});
         setModules(data.modules || []);
@@ -54,8 +60,17 @@ export const AppProvider = ({ children }) => {
         
         const defaultAccounts = [
           { id: 'admin', pw: '1234', role: 'admin', name: 'System Admin' },
-          { id: 'user', pw: '1234', role: 'user', name: 'Test User' }
+          { id: 'user', pw: '1234', role: 'user', name: 'Test User' },
+          { id: 'guest', pw: 'guest', role: 'guest', name: 'Guest User' }
         ];
+
+        let loadedAccounts = getLocal('qms_accounts', defaultAccounts);
+        if (loadedAccounts && Array.isArray(loadedAccounts) && !loadedAccounts.find(a => a.id === 'guest')) {
+          loadedAccounts = [...loadedAccounts, { id: 'guest', pw: 'guest', role: 'guest', name: 'Guest User' }];
+        }
+        
+        setAccounts(loadedAccounts);
+
         const defaultModules = [
           { id: '공통TC', label: '공통 TC' },
           { id: 'JEONSE', label: 'JEONSE' },
@@ -389,7 +404,8 @@ export const AppProvider = ({ children }) => {
       updateScreenRules,
       markAsRead,
       markAllAsRead,
-      isLoaded
+      isLoaded,
+      isReadOnly: user?.role === 'guest'
     }}>
       {children}
     </AppContext.Provider>

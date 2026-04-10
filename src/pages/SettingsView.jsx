@@ -4,7 +4,7 @@ import { ArrowUp, ArrowDown, Plus, Trash2 } from 'lucide-react';
 import './SettingsView.css';
 
 function SettingsView() {
-  const { user, accounts, modules, updateModules, addModule, deleteModule, addAccount, deleteAccount, updateAccountPw, depthOptions, addDepthOption, deleteDepthOption, updateDepthOptions } = useContext(AppContext);
+  const { user, accounts, modules, updateModules, addModule, deleteModule, addAccount, deleteAccount, updateAccountPw, depthOptions, addDepthOption, deleteDepthOption, updateDepthOptions, isReadOnly } = useContext(AppContext);
   const [newModId, setNewModId] = useState('');
   const [newModName, setNewModName] = useState('');
   
@@ -14,8 +14,10 @@ function SettingsView() {
 
   const [newDepthName, setNewDepthName] = useState('');
 
-  if (user?.role !== 'admin') {
-    return <div className="p-4 text-center">접근 권한이 없습니다. (Admin 전용)</div>;
+  const isAdmin = user?.role === 'admin';
+
+  if (!isAdmin && !isReadOnly && user?.role !== 'user') {
+    return <div className="p-4 text-center">접근 권한이 없습니다.</div>;
   }
 
   const handleMoveUp = (index) => {
@@ -93,20 +95,22 @@ function SettingsView() {
         <div className="card shadow-sm" style={{ padding: '24px' }}>
           <h3 style={{ marginBottom: '16px', color: 'var(--primary)' }}>업무영역 메뉴 관리</h3>
         
-        <form onSubmit={handleAdd} className="add-module-form-settings">
-          <input 
-            placeholder="모듈 ID (예: LOGIN)" 
-            value={newModId} 
-            onChange={e => setNewModId(e.target.value)} 
-            required 
-          />
-          <input 
-            placeholder="노출 이름 (예: 로그인)" 
-            value={newModName} 
-            onChange={e => setNewModName(e.target.value)} 
-          />
-          <button type="submit" className="btn btn-primary"><Plus size={16}/> 추가</button>
-        </form>
+        {!isReadOnly && isAdmin && (
+          <form onSubmit={handleAdd} className="add-module-form-settings">
+            <input 
+              placeholder="모듈 ID (예: LOGIN)" 
+              value={newModId} 
+              onChange={e => setNewModId(e.target.value)} 
+              required 
+            />
+            <input 
+              placeholder="노출 이름 (예: 로그인)" 
+              value={newModName} 
+              onChange={e => setNewModName(e.target.value)} 
+            />
+            <button type="submit" className="btn btn-primary"><Plus size={16}/> 추가</button>
+          </form>
+        )}
 
         <ul className="module-sort-list">
           {modules.filter(mod => mod.id !== '공통TC' && mod.id !== 'ADMIN').map((mod) => {
@@ -117,11 +121,15 @@ function SettingsView() {
                   <strong>{mod.label}</strong> <span className="text-muted text-sm">({mod.id})</span>
                 </div>
                 <div className="module-actions">
-                  <button className="btn-icon" onClick={() => handleMoveUp(realIdx)} disabled={realIdx <= 1}><ArrowUp size={16}/></button>
-                  <button className="btn-icon" onClick={() => handleMoveDown(realIdx)} disabled={realIdx === modules.length - 1}><ArrowDown size={16}/></button>
-                  <button className="btn-icon text-danger" onClick={() => deleteModule(mod.id)}>
-                    <Trash2 size={16}/>
-                  </button>
+                  {!isReadOnly && isAdmin && (
+                    <>
+                      <button className="btn-icon" onClick={() => handleMoveUp(realIdx)} disabled={realIdx <= 1}><ArrowUp size={16}/></button>
+                      <button className="btn-icon" onClick={() => handleMoveDown(realIdx)} disabled={realIdx === modules.length - 1}><ArrowDown size={16}/></button>
+                      <button className="btn-icon text-danger" onClick={() => deleteModule(mod.id)}>
+                        <Trash2 size={16}/>
+                      </button>
+                    </>
+                  )}
                 </div>
               </li>
             );
@@ -129,73 +137,84 @@ function SettingsView() {
         </ul>
       </div>
 
-      <div className="card shadow-sm" style={{ padding: '24px' }}>
-        <h3 style={{ marginBottom: '16px', color: 'var(--primary)' }}>사용자 계정 관리</h3>
-        <form onSubmit={handleAddUser} className="add-module-form-settings" style={{flexWrap: 'wrap'}}>
-          <input 
-            placeholder="아이디" 
-            value={newUserId} 
-            onChange={e => setNewUserId(e.target.value)} 
-            required 
-            style={{minWidth: '120px'}}
-          />
-          <input 
-            placeholder="비밀번호" 
-            type="password"
-            value={newUserPw} 
-            onChange={e => setNewUserPw(e.target.value)} 
-            required 
-            style={{minWidth: '120px'}}
-          />
-          <select value={newUserRole} onChange={e => setNewUserRole(e.target.value)} style={{padding: '8px', border: '1px solid var(--border)', borderRadius: '4px'}}>
-            <option value="user">일반 사용자</option>
-            <option value="admin">관리자</option>
-          </select>
-          <button type="submit" className="btn btn-primary"><Plus size={16}/> 추가</button>
-        </form>
+      {isAdmin && (
+        <div className="card shadow-sm" style={{ padding: '24px' }}>
+          <h3 style={{ marginBottom: '16px', color: 'var(--primary)' }}>사용자 계정 관리</h3>
+          {!isReadOnly && (
+            <form onSubmit={handleAddUser} className="add-module-form-settings" style={{flexWrap: 'wrap'}}>
+              <input 
+                placeholder="아이디" 
+                value={newUserId} 
+                onChange={e => setNewUserId(e.target.value)} 
+                required 
+                style={{minWidth: '120px'}}
+              />
+              <input 
+                placeholder="비밀번호" 
+                type="password"
+                value={newUserPw} 
+                onChange={e => setNewUserPw(e.target.value)} 
+                required 
+                style={{minWidth: '120px'}}
+              />
+              <select value={newUserRole} onChange={e => setNewUserRole(e.target.value)} style={{padding: '8px', border: '1px solid var(--border)', borderRadius: '4px'}}>
+                <option value="user">일반 사용자</option>
+                <option value="admin">관리자</option>
+                <option value="guest">게스트</option>
+              </select>
+              <button type="submit" className="btn btn-primary"><Plus size={16}/> 추가</button>
+            </form>
+          )}
 
-        <ul className="module-sort-list">
-          {accounts.map((acc) => (
-            <li key={acc.id} className="module-sort-item" style={{flexDirection: 'column', alignItems: 'flex-start'}}>
-              <div style={{display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '8px'}}>
-                <div className="module-info">
-                  <strong>{acc.id}</strong> <span className="text-muted text-sm">({acc.role === 'admin' ? '관리자' : '일반'})</span>
+          <ul className="module-sort-list">
+            {accounts.map((acc) => (
+              <li key={acc.id} className="module-sort-item" style={{flexDirection: 'column', alignItems: 'flex-start'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '8px'}}>
+                  <div className="module-info">
+                    <strong>{acc.id}</strong> <span className="text-muted text-sm">({acc.role === 'admin' ? '관리자' : acc.role === 'guest' ? '게스트' : '일반'})</span>
+                  </div>
+                  <div className="module-actions">
+                    {!isReadOnly && acc.id !== 'admin' && (
+                      <button className="btn-icon text-danger" onClick={() => deleteAccount(acc.id)}>
+                        <Trash2 size={16}/>
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="module-actions">
-                  {acc.id !== 'admin' && (
-                    <button className="btn-icon text-danger" onClick={() => deleteAccount(acc.id)}>
-                      <Trash2 size={16}/>
-                    </button>
+                <div style={{display: 'flex', gap: '8px', width: '100%'}}>
+                  {isAdmin && !isReadOnly ? (
+                    <input 
+                      type="text" 
+                      value={acc.pw}
+                      onChange={(e) => updateAccountPw(acc.id, e.target.value)}
+                      style={{padding: '4px 8px', border: '1px solid var(--border)', fontSize: '12px'}}
+                      placeholder="비밀번호 변경"
+                    />
+                  ) : (
+                    <span className="text-muted text-sm">PW: ****</span>
                   )}
                 </div>
-              </div>
-              <div style={{display: 'flex', gap: '8px', width: '100%'}}>
-                <input 
-                  type="text" 
-                  value={acc.pw}
-                  onChange={(e) => updateAccountPw(acc.id, e.target.value)}
-                  style={{padding: '4px 8px', border: '1px solid var(--border)', fontSize: '12px'}}
-                  placeholder="비밀번호 변경"
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="card shadow-sm" style={{ padding: '24px' }}>
         <h3 style={{ marginBottom: '16px', color: 'var(--primary)' }}>Depth 콤보박스 추천항목 관리</h3>
         <p className="text-muted text-sm" style={{marginBottom: '16px'}}>테스트 케이스 작성 시 Depth 입력란에 기본 제공되는 자동완성 목록입니다.</p>
-        <form onSubmit={handleAddDepth} className="add-module-form-settings" style={{flexWrap: 'wrap'}}>
-          <input 
-            placeholder="추가할 Depth 이름 (예: 리스트)" 
-            value={newDepthName} 
-            onChange={e => setNewDepthName(e.target.value)} 
-            required 
-            style={{flex: 1, minWidth: '200px'}}
-          />
-          <button type="submit" className="btn btn-primary"><Plus size={16}/> 항목 추가</button>
-        </form>
+        {!isReadOnly && (isAdmin || user?.role === 'user') && (
+          <form onSubmit={handleAddDepth} className="add-module-form-settings" style={{flexWrap: 'wrap'}}>
+            <input 
+              placeholder="추가할 Depth 이름 (예: 리스트)" 
+              value={newDepthName} 
+              onChange={e => setNewDepthName(e.target.value)} 
+              required 
+              style={{flex: 1, minWidth: '200px'}}
+            />
+            <button type="submit" className="btn btn-primary"><Plus size={16}/> 항목 추가</button>
+          </form>
+        )}
 
         <ul className="module-sort-list" style={{ marginTop: '16px' }}>
           {depthOptions.map((opt, idx) => (
@@ -204,11 +223,15 @@ function SettingsView() {
                 <strong>{opt}</strong>
               </div>
               <div className="module-actions">
-                <button className="btn-icon" onClick={() => handleMoveUpDepth(idx)} disabled={idx === 0}><ArrowUp size={16}/></button>
-                <button className="btn-icon" onClick={() => handleMoveDownDepth(idx)} disabled={idx === depthOptions.length - 1}><ArrowDown size={16}/></button>
-                <button className="btn-icon text-danger" onClick={() => deleteDepthOption(opt)} title="삭제">
-                  <Trash2 size={16}/>
-                </button>
+                {!isReadOnly && (isAdmin || user?.role === 'user') && (
+                  <>
+                    <button className="btn-icon" onClick={() => handleMoveUpDepth(idx)} disabled={idx === 0}><ArrowUp size={16}/></button>
+                    <button className="btn-icon" onClick={() => handleMoveDownDepth(idx)} disabled={idx === depthOptions.length - 1}><ArrowDown size={16}/></button>
+                    <button className="btn-icon text-danger" onClick={() => deleteDepthOption(opt)} title="삭제">
+                      <Trash2 size={16}/>
+                    </button>
+                  </>
+                )}
               </div>
             </li>
           ))}

@@ -9,7 +9,7 @@ import './TestCaseView.css';
 
 function TestCaseView() {
   const { moduleName } = useParams();
-  const { testCasesData, updateTestCase, addTestCase, deleteTestCase, bulkDeleteTestCases, appendTestCasesFromExcel } = useContext(AppContext);
+  const { testCasesData, updateTestCase, addTestCase, deleteTestCase, bulkDeleteTestCases, appendTestCasesFromExcel, isReadOnly } = useContext(AppContext);
   const fileInputRef = useRef(null);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,6 +34,7 @@ function TestCaseView() {
   };
 
   const handleCopy = (tc) => {
+    if (isReadOnly) return;
     if (window.confirm(`[${tc.tc_id}] 케이스를 복제하시겠습니까?`)) {
       const baseId = tc.tc_id.split('_COPY')[0];
       const existingCopies = data.filter(item => item.tc_id && item.tc_id.startsWith(`${baseId}_COPY`));
@@ -193,20 +194,24 @@ function TestCaseView() {
             <FileOutput size={16} style={{marginRight: '6px'}} /> 내보내기
           </button>
 
-          <input 
-            type="file" 
-            accept=".xlsx, .xls" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload} 
-            style={{ display: 'none' }} 
-            id="excel-upload"
-          />
-          <label htmlFor="excel-upload" className="btn btn-outline btn-upload" title="엑셀 업로드">
-            <Upload size={16} style={{marginRight: '6px'}} /> 업로드
-          </label>
-          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-            <Plus size={16} style={{marginRight: '6px'}} /> 새 케이스 추가
-          </button>
+          {!isReadOnly && (
+            <>
+              <input 
+                type="file" 
+                accept=".xlsx, .xls" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                style={{ display: 'none' }} 
+                id="excel-upload"
+              />
+              <label htmlFor="excel-upload" className="btn btn-outline btn-upload" title="엑셀 업로드">
+                <Upload size={16} style={{marginRight: '6px'}} /> 업로드
+              </label>
+              <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+                <Plus size={16} style={{marginRight: '6px'}} /> 새 케이스 추가
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -217,6 +222,7 @@ function TestCaseView() {
           onDelete={handleDelete}
           onBulkDelete={handleBulkDelete}
           onCopy={handleCopy}
+          isReadOnly={isReadOnly}
           key={moduleName} 
         />
       </div>
