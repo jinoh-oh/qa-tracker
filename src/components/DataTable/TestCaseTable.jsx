@@ -128,7 +128,7 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
           </button>
         </div>
       )}
-      <div className="table-wrapper" style={{ flex: 1, overflow: 'auto' }}>
+      <div className={`table-wrapper ${isReadOnly ? 'is-readonly' : ''}`} style={{ flex: 1, overflow: 'auto' }}>
         <table className="tc-table">
           <thead>
             <tr>
@@ -137,8 +137,8 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                   <input type="checkbox" onChange={toggleSelectAll} checked={selectedIds.length === data.length && data.length > 0} />
                 </th>
               )}
-              <th className="sticky-col">NO</th>
-              <th className="sticky-col-tc">TC_ID</th>
+              <th className="sticky-col no-col">NO</th>
+              <th className="sticky-col-tc tc-id-col">TC_ID</th>
               <th>1 Depth</th>
               <th>2 Depth</th>
               <th>3 Depth</th>
@@ -165,11 +165,11 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                     <input type="checkbox" checked={selectedIds.includes(tc.tc_id)} onChange={() => toggleSelect(tc.tc_id)} />
                   </td>
                 )}
-                <td className="sticky-col">{index + 1}</td>
+                <td className="sticky-col no-col">{index + 1}</td>
                 
                 {editingId === tc.tc_id ? (
                   <>
-                    <td className="sticky-col-tc"><input type="text" value={editForm.tc_id} onChange={(e) => handleChange(e, 'tc_id')} className="edit-input" /></td>
+                    <td className="tc-id-col"><input type="text" value={editForm.tc_id} onChange={(e) => handleChange(e, 'tc_id')} className="edit-input" /></td>
                     <td><DepthSelect value={editForm.depth1} onChange={(e) => handleChange(e, 'depth1')} name={`d1-${tc.tc_id || ''}`} /></td>
                     <td><DepthSelect value={editForm.depth2} onChange={(e) => handleChange(e, 'depth2')} name={`d2-${tc.tc_id || ''}`} /></td>
                     <td><DepthSelect value={editForm.depth3} onChange={(e) => handleChange(e, 'depth3')} name={`d3-${tc.tc_id || ''}`} /></td>
@@ -207,7 +207,7 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                   </>
                 ) : (
                   <>
-                    <td className="sticky-col-tc fw-500">{tc.tc_id}</td>
+                    <td className="tc-id-col fw-500">{tc.tc_id}</td>
                     <td><DepthBadge val={tc.depth1} /></td>
                     <td><DepthBadge val={tc.depth2} /></td>
                     <td><DepthBadge val={tc.depth3} /></td>

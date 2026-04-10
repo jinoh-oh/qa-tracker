@@ -74,22 +74,58 @@
   position: sticky;
   left: 0;
   background-color: var(--surface);
-  z-index: 1;
-}
-.checkbox-col { left: 0; min-width: 40px; text-align: center; }
-.sticky-col:nth-child(2) { left: 40px; min-width: 50px; }
-.sticky-col-tc { position: sticky; left: 90px; background-color: var(--surface); z-index: 1; min-width: 150px; }
-
-.tc-table th.sticky-col, .tc-table th.sticky-col-tc {
-  background-color: var(--primary);
   z-index: 10;
-  box-shadow: 1px 1px 0 #cbd5e0;
 }
 
-.tc-table tbody tr:hover .sticky-col, .tc-table tbody tr:hover .sticky-col-tc {
+.checkbox-col { 
+  left: 0; 
+  min-width: 40px; 
+  text-align: center; 
+}
+
+/* Default (Action columns present) offsets */
+.no-col { 
+  left: 40px; 
+  min-width: 50px; 
+  text-align: center; 
+}
+
+.tc-id-col { 
+  position: sticky;
+  left: 90px; 
+  background-color: var(--surface); 
+  z-index: 10; 
+  min-width: 150px; 
+}
+
+/* Read-Only (Guest) mode offsets */
+.table-wrapper.is-readonly .no-col {
+  left: 0;
+}
+
+.table-wrapper.is-readonly .tc-id-col {
+  left: 50px;
+}
+
+/* Divider shadow for sticky columns */
+.tc-id-col {
+  border-right: 2px solid #cbd5e0 !important;
+}
+
+/* Header sticky styling with stronger boundary */
+.tc-table th.sticky-col, 
+.tc-table th.tc-id-col {
+  background-color: var(--primary);
+  z-index: 20;
+  border-right: 2px solid #4a5568 !important;
+}
+
+.tc-table tbody tr:hover .sticky-col, 
+.tc-table tbody tr:hover .tc-id-col {
   background-color: #f8fafc;
 }
-.tc-table tbody tr.row-selected .sticky-col, .tc-table tbody tr.row-selected .sticky-col-tc {
+.tc-table tbody tr.row-selected .sticky-col, 
+.tc-table tbody tr.row-selected .tc-id-col {
   background-color: #ebf8ff;
 }
 
