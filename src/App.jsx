@@ -36,8 +36,17 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (mainRef.current) {
       mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // 내부 스크롤이 있는 요소들도 최상단으로 이동 (TestCaseTable 등)
+      const scrollables = mainRef.current.querySelectorAll('.table-wrapper, .table-container, .card, .defect-table-container');
+      scrollables.forEach(el => {
+        if (el.scrollTo) {
+          el.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          el.scrollTop = 0;
+        }
+      });
     }
-    // 추가 대비책
     document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

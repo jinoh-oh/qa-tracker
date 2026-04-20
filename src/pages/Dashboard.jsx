@@ -26,20 +26,27 @@ function Dashboard() {
       if (EXCLUDED_MODULES.includes(moduleName)) return;
 
       const tcs = testCasesData[moduleName];
-      let mTotal = tcs.length;
-      let mExcluded = 0;
+      const isCommonModule = moduleName === '공통TC' || moduleName === '공통';
+      
+      let mTotalCount = 0;
+      let mExcludedCount = 0;
       let mPass = 0;
       let mFail = 0;
       let mNa = 0;
       let mBlocked = 0;
 
       tcs.forEach(tc => {
-        totalTC++;
-        // TC Type check
-        const isExcluded = (moduleName === '공통TC' || moduleName === '공통') ? true : tc.type === 'BIZ';
-        if (isExcluded) {
-          mExcluded++;
-          excludedTC++;
+        // Exception logic for "Common" module vs regular modules
+        if (isCommonModule) {
+          // 1. 총 TC: BIZ 제외 (COM만)
+          if (tc.type !== 'BIZ') mTotalCount++;
+          // 2. 공통 제외 TC: 구분 없이 전체
+          mExcludedCount++;
+        } else {
+          // 1. 총 TC: 전체
+          mTotalCount++;
+          // 2. 공통 제외 TC: BIZ 타입만
+          if (tc.type === 'BIZ') mExcludedCount++;
         }
 
         if (tc.result === 'Pass') { pass++; mPass++; }
@@ -48,17 +55,19 @@ function Dashboard() {
         else if (tc.result === 'Blocked') { blocked++; mBlocked++; }
       });
 
+      totalTC += mTotalCount;
+      excludedTC += mExcludedCount;
+
       const processedTC = mPass + mFail;
-      const validTotal = mTotal; 
-      const mProgress = validTotal > 0 ? Math.round((processedTC / validTotal) * 100) : 0;
+      const mProgress = mTotalCount > 0 ? Math.round((processedTC / mTotalCount) * 100) : 0;
 
       const moduleLabel = modules.find(m => m.id === moduleName)?.label || moduleName;
 
       mStats.push({
         moduleId: moduleName,
         module: moduleLabel,
-        total: mTotal,
-        excluded: mExcluded,
+        total: mTotalCount,
+        excluded: mExcludedCount,
         pass: mPass,
         fail: mFail,
         na: mNa,
