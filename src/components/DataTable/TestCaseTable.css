@@ -181,5 +181,5 @@
 
 .no-data { padding: 40px; text-align: center; color: var(--text-muted); }
 
-.no-col { text-align: center; }
-.tc-id-col { text-align: center; }
+.tc-table th.no-col, .tc-table td.no-col { text-align: center !important; }
+.tc-table th.tc-id-col, .tc-table td.tc-id-col { text-align: center !important; }
