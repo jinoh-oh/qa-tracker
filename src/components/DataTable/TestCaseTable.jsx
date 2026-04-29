@@ -26,17 +26,9 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
       let bVal = b[sortConfig.key] ?? '';
       
       if (sortConfig.key === 'no') {
-        const parseNo = (val) => {
-          if (typeof val === 'number') return val;
-          if (!val) return 0;
-          const num = parseInt(String(val).replace(/[^0-9-]/g, ''), 10);
-          return isNaN(num) ? 0 : num;
-        };
-        const numA = parseNo(aVal);
-        const numB = parseNo(bVal);
-        if (numA < numB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (numA > numB) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
+        const numA = parseInt(String(aVal).replace(/[^0-9-]/g, ''), 10) || 0;
+        const numB = parseInt(String(bVal).replace(/[^0-9-]/g, ''), 10) || 0;
+        return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
       }
 
       if (typeof aVal === 'string') aVal = aVal.toLowerCase();

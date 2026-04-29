@@ -147,8 +147,9 @@ function TestCaseView() {
       const result = xlsx.utils.sheet_to_json(ws);
 
       if (result.length > 0) {
+        const maxNo = data.length > 0 ? Math.max(...data.map(tc => Number(tc.no) || 0)) : 0;
         const mappedData = result.map((row, idx) => ({
-          no: data.length + idx + 1,
+          no: maxNo + idx + 1,
           tc_id: row['TC_ID'] || `TC-${moduleName}-${Date.now()}-${idx}`,
           depth1: row['1 Depth'] || moduleName,
           depth2: row['2 Depth'] || '',
@@ -182,8 +183,9 @@ function TestCaseView() {
     const numStr = String(data.length + 1).padStart(4, '0');
     const defaultTcId = `TC-${typePrefix}-${moduleName}-${numStr}`;
 
+    const maxNo = data.length > 0 ? Math.max(...data.map(tc => Number(tc.no) || 0)) : 0;
     const newTc = {
-      no: data.length + 1,
+      no: maxNo + 1,
       ...newTcForm,
       tc_id: isCommon ? newTcForm.tc_id : (newTcForm.tc_id || defaultTcId)
     };
