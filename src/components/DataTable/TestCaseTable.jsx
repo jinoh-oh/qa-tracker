@@ -26,8 +26,8 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
       let bVal = b[sortConfig.key] ?? '';
       
       if (sortConfig.key === 'no') {
-        const numA = parseInt(String(aVal).replace(/[^0-9-]/g, ''), 10) || 0;
-        const numB = parseInt(String(bVal).replace(/[^0-9-]/g, ''), 10) || 0;
+        const numA = Number(a.no) || 0;
+        const numB = Number(b.no) || 0;
         return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
       }
 
