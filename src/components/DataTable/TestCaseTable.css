@@ -180,3 +180,6 @@
 .btn-icon.trash { color: #e53e3e; } .btn-icon.trash:hover { background-color: #fff5f5; }
 
 .no-data { padding: 40px; text-align: center; color: var(--text-muted); }
+
+.no-col { text-align: center; }
+.tc-id-col { text-align: center; }
