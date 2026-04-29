@@ -171,7 +171,9 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                   <input type="checkbox" onChange={toggleSelectAll} checked={selectedIds.length === data.length && data.length > 0} />
                 </th>
               )}
-              <th className="sticky-col no-col" onClick={() => handleSort('no')} style={{cursor:'pointer'}}>NO <SortIcon columnKey="no" /></th>
+              <th className="sticky-col no-col" onClick={() => handleSort('no')} style={{cursor:'pointer'}}>
+                NO ({data.length > 0 ? `${typeof data[0].no}:${data[0].no}` : 'empty'}) <SortIcon columnKey="no" />
+              </th>
               <th className="sticky-col-tc tc-id-col" onClick={() => handleSort('tc_id')} style={{cursor:'pointer'}}>TC_ID <SortIcon columnKey="tc_id" /></th>
               <th onClick={() => handleSort('depth1')} style={{cursor:'pointer'}}>1 Depth <SortIcon columnKey="depth1" /></th>
               <th onClick={() => handleSort('depth2')} style={{cursor:'pointer'}}>2 Depth <SortIcon columnKey="depth2" /></th>
@@ -194,7 +196,7 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
           </thead>
           <tbody>
             {sortedData.map((tc, index) => (
-              <tr key={tc.tc_id || index} className={selectedIds.includes(tc.tc_id) ? 'row-selected' : ''}>
+              <tr key={`row-${tc.no}-${tc.tc_id || index}`} className={selectedIds.includes(tc.tc_id) ? 'row-selected' : ''}>
                 {!isReadOnly && (
                   <td className="sticky-col checkbox-col">
                     <input type="checkbox" checked={selectedIds.includes(tc.tc_id)} onChange={() => toggleSelect(tc.tc_id)} />
