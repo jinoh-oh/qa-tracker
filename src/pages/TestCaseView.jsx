@@ -4,7 +4,7 @@ import TestCaseTable from '../components/DataTable/TestCaseTable';
 import { AppContext } from '../context/AppContext';
 import * as xlsx from 'xlsx';
 import { saveAs } from 'file-saver';
-import { Download, Upload, FileOutput, Plus } from 'lucide-react';
+import { Download, Upload, FileOutput, Plus, Search } from 'lucide-react';
 import './TestCaseView.css';
 
 function TestCaseView() {
@@ -13,13 +13,27 @@ function TestCaseView() {
   const fileInputRef = useRef(null);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [newTcForm, setNewTcForm] = useState({
     tc_id: '', depth1: '', depth2: '', depth3: '', depth4: '', 
     scenario: '', priority: 'P2', precondition: '', procedure: '', 
-    expected: '', comment: '', result: 'N/A', tester: '', date: '', type: 'BIZ', defect_id: ''
+    expected: '', comment: '', result: 'N/A', tester: '', date: '', defect_id: '', type: 'BIZ', common_tc_ref: ''
   });
 
   const data = testCasesData[moduleName] || [];
+
+  const filteredData = React.useMemo(() => {
+    if (!searchTerm.trim()) return data;
+    const lower = searchTerm.toLowerCase();
+    return data.filter(tc => 
+      (tc.tc_id && tc.tc_id.toLowerCase().includes(lower)) ||
+      (tc.scenario && tc.scenario.toLowerCase().includes(lower)) ||
+      (tc.tester && tc.tester.toLowerCase().includes(lower)) ||
+      (tc.defect_id && tc.defect_id.toLowerCase().includes(lower)) ||
+      (tc.procedure && tc.procedure.toLowerCase().includes(lower)) ||
+      (tc.expected && tc.expected.toLowerCase().includes(lower))
+    );
+  }, [data, searchTerm]);
 
   const handleUpdate = (originalId, updatedTc) => {
     updateTestCase(moduleName, originalId, updatedTc);
@@ -52,7 +66,7 @@ function TestCaseView() {
   const COLUMNS = [
     'NO', 'TC_ID', '1 Depth', '2 Depth', '3 Depth', '4 Depth', 'Test Scenario',
     'Priority', 'Pre-condition', 'Procedure', 'Expected Result', 'Comment',
-    'Result', 'Tester', 'Test Date', 'TC Type', 'Defect ID'
+    'Result', 'Tester', 'Test Date', 'Defect ID', 'TC Type', '공통TC 참조'
   ];
 
   const downloadNative = async (wb, filename) => {
@@ -106,8 +120,9 @@ function TestCaseView() {
         'Result': tc.result,
         'Tester': tc.tester,
         'Test Date': tc.date,
+        'Defect ID': tc.defect_id,
         'TC Type': tc.type,
-        'Defect ID': tc.defect_id
+        '공통TC 참조': tc.common_tc_ref
       }));
       ws = xlsx.utils.json_to_sheet(exportData);
     } else {
@@ -148,8 +163,9 @@ function TestCaseView() {
           result: row['Result'] || 'N/A',
           tester: row['Tester'] || '',
           date: row['Test Date'] || '',
+          defect_id: row['Defect ID'] || '',
           type: row['TC Type'] || 'BIZ',
-          defect_id: row['Defect ID'] || ''
+          common_tc_ref: row['공통TC 참조'] || ''
         }));
         appendTestCasesFromExcel(moduleName, mappedData);
         alert(`${mappedData.length}개의 테스트 케이스가 성공적으로 추가되었습니다.`);
@@ -179,13 +195,25 @@ function TestCaseView() {
 
     addTestCase(moduleName, newTc);
     setIsModalOpen(false);
-    setNewTcForm({ tc_id: '', depth1: '', depth2: '', depth3: '', depth4: '', scenario: '', priority: 'P2', precondition: '', procedure: '', expected: '', comment: '', result: 'N/A', tester: '', date: '', type: 'BIZ', defect_id: '' });
+    setNewTcForm({ tc_id: '', depth1: '', depth2: '', depth3: '', depth4: '', scenario: '', priority: 'P2', precondition: '', procedure: '', expected: '', comment: '', result: 'N/A', tester: '', date: '', defect_id: '', type: 'BIZ', common_tc_ref: '' });
   };
 
   return (
     <div className="test-case-view animate-fade-in" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--background)' }}>
       <div className="view-header" style={{ flexShrink: 0, paddingBottom: '16px' }}>
-        <h2 className="view-title">{moduleName} 테스트 케이스</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <h2 className="view-title" style={{ margin: 0 }}>{moduleName} 테스트 케이스</h2>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search size={16} style={{ position: 'absolute', left: '10px', color: '#a0aec0' }} />
+            <input 
+              type="text" 
+              placeholder="ID, 시나리오, 테스터 등 검색..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ padding: '8px 12px 8px 34px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px', width: '280px', outline: 'none' }}
+            />
+          </div>
+        </div>
         <div className="view-actions">
           <button className="btn btn-outline" onClick={handleDownloadSample} title="샘플 양식 다운로드">
             <Download size={16} style={{marginRight: '6px'}} /> 양식 다운로드
@@ -217,7 +245,7 @@ function TestCaseView() {
 
       <div className="card shadow-sm" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px' }}>
         <TestCaseTable 
-          data={data} 
+          data={filteredData} 
           onUpdate={handleUpdate} 
           onDelete={handleDelete}
           onBulkDelete={handleBulkDelete}
@@ -239,6 +267,7 @@ function TestCaseView() {
                     <option value="BIZ">BIZ</option><option value="COM">COM</option>
                   </select>
                 </div>
+                <div className="form-group"><label>공통TC 참조</label><input type="text" value={newTcForm.common_tc_ref} onChange={e => setNewTcForm({...newTcForm, common_tc_ref: e.target.value})} placeholder="참조 대상 ID" /></div>
                 <div className="form-group"><label>1 Depth</label><input type="text" value={newTcForm.depth1} onChange={e => setNewTcForm({...newTcForm, depth1: e.target.value})} /></div>
                 <div className="form-group"><label>2 Depth</label><input type="text" value={newTcForm.depth2} onChange={e => setNewTcForm({...newTcForm, depth2: e.target.value})} /></div>
                 <div className="form-group"><label>3 Depth</label><input type="text" value={newTcForm.depth3} onChange={e => setNewTcForm({...newTcForm, depth3: e.target.value})} /></div>

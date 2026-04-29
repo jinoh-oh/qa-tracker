@@ -9,6 +9,42 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [selectedIds, setSelectedIds] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ key: 'no', direction: 'desc' });
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedData = React.useMemo(() => {
+    if (!sortConfig.key || !data) return data;
+    return [...data].sort((a, b) => {
+      let aVal = a[sortConfig.key] ?? '';
+      let bVal = b[sortConfig.key] ?? '';
+      
+      if (sortConfig.key === 'no') {
+        aVal = Number(aVal) || 0;
+        bVal = Number(bVal) || 0;
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      }
+
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [data, sortConfig]);
+
+  const SortIcon = ({ columnKey }) => {
+    if (sortConfig.key !== columnKey) return <span style={{opacity:0.3, fontSize:'10px', marginLeft:'4px'}}>↕</span>;
+    return sortConfig.direction === 'asc' ? <span style={{fontSize:'10px', marginLeft:'4px'}}>▲</span> : <span style={{fontSize:'10px', marginLeft:'4px'}}>▼</span>;
+  };
 
   const handleEditClick = (tc) => {
     setEditingId(tc.tc_id);
@@ -137,35 +173,36 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                   <input type="checkbox" onChange={toggleSelectAll} checked={selectedIds.length === data.length && data.length > 0} />
                 </th>
               )}
-              <th className="sticky-col no-col">NO</th>
-              <th className="sticky-col-tc tc-id-col">TC_ID</th>
-              <th>1 Depth</th>
-              <th>2 Depth</th>
-              <th>3 Depth</th>
-              <th>4 Depth</th>
-              <th>Test Scenario</th>
-              <th>Priority</th>
+              <th className="sticky-col no-col" onClick={() => handleSort('no')} style={{cursor:'pointer'}}>NO <SortIcon columnKey="no" /></th>
+              <th className="sticky-col-tc tc-id-col" onClick={() => handleSort('tc_id')} style={{cursor:'pointer'}}>TC_ID <SortIcon columnKey="tc_id" /></th>
+              <th onClick={() => handleSort('depth1')} style={{cursor:'pointer'}}>1 Depth <SortIcon columnKey="depth1" /></th>
+              <th onClick={() => handleSort('depth2')} style={{cursor:'pointer'}}>2 Depth <SortIcon columnKey="depth2" /></th>
+              <th onClick={() => handleSort('depth3')} style={{cursor:'pointer'}}>3 Depth <SortIcon columnKey="depth3" /></th>
+              <th onClick={() => handleSort('depth4')} style={{cursor:'pointer'}}>4 Depth <SortIcon columnKey="depth4" /></th>
+              <th onClick={() => handleSort('scenario')} style={{cursor:'pointer'}}>Test Scenario <SortIcon columnKey="scenario" /></th>
+              <th onClick={() => handleSort('priority')} style={{cursor:'pointer'}}>Priority <SortIcon columnKey="priority" /></th>
               <th>Pre-condition</th>
               <th>Procedure</th>
               <th>Expected Result</th>
-              <th>Result</th>
+              <th onClick={() => handleSort('result')} style={{cursor:'pointer'}}>Result <SortIcon columnKey="result" /></th>
               <th>Comment</th>
-              <th>Tester</th>
-              <th>Test Date</th>
-              <th>TC Type</th>
-              <th>Defect ID</th>
+              <th onClick={() => handleSort('tester')} style={{cursor:'pointer'}}>Tester <SortIcon columnKey="tester" /></th>
+              <th onClick={() => handleSort('date')} style={{cursor:'pointer'}}>Test Date <SortIcon columnKey="date" /></th>
+              <th onClick={() => handleSort('defect_id')} style={{cursor:'pointer'}}>Defect ID <SortIcon columnKey="defect_id" /></th>
+              <th onClick={() => handleSort('type')} style={{cursor:'pointer'}}>TC Type <SortIcon columnKey="type" /></th>
+              <th onClick={() => handleSort('common_tc_ref')} style={{cursor:'pointer'}}>공통TC 참조 <SortIcon columnKey="common_tc_ref" /></th>
               {!isReadOnly && <th>Action</th>}
             </tr>
           </thead>
           <tbody>
-            {data.map((tc, index) => (
+            {sortedData.map((tc, index) => (
               <tr key={tc.tc_id || index} className={selectedIds.includes(tc.tc_id) ? 'row-selected' : ''}>
                 {!isReadOnly && (
                   <td className="sticky-col checkbox-col">
                     <input type="checkbox" checked={selectedIds.includes(tc.tc_id)} onChange={() => toggleSelect(tc.tc_id)} />
                   </td>
                 )}
-                <td className="sticky-col no-col">{index + 1}</td>
+                <td className="sticky-col no-col">{tc.no}</td>
                 
                 {editingId === tc.tc_id ? (
                   <>
@@ -191,12 +228,13 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                     <td><textarea value={editForm.comment} onChange={(e) => handleChange(e, 'comment')} className="edit-input expected-text" /></td>
                     <td><input type="text" value={editForm.tester || ''} onChange={(e) => handleChange(e, 'tester')} className="edit-input w-80" /></td>
                     <td><input type="date" value={editForm.date || ''} onChange={(e) => handleChange(e, 'date')} className="edit-input" /></td>
+                    <td><input type="text" value={editForm.defect_id || ''} onChange={(e) => handleChange(e, 'defect_id')} className="edit-input w-80" /></td>
                     <td>
                       <select value={editForm.type} onChange={(e) => handleChange(e, 'type')} className="edit-input w-80">
                         <option value="COM">COM</option><option value="BIZ">BIZ</option>
                       </select>
                     </td>
-                    <td><input type="text" value={editForm.defect_id || ''} onChange={(e) => handleChange(e, 'defect_id')} className="edit-input w-80" /></td>
+                    <td><input type="text" value={editForm.common_tc_ref || ''} onChange={(e) => handleChange(e, 'common_tc_ref')} className="edit-input w-80" /></td>
                     
                     <td>
                       <div className="action-buttons">
@@ -221,7 +259,6 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                     <td className="pre-wrap min-w-150">{tc.comment}</td>
                     <td>{tc.tester}</td>
                     <td>{tc.date}</td>
-                    <td>{tc.type}</td>
                     <td>
                       {tc.defect_id ? (
                         <Link to={`/defects?defectId=${tc.defect_id}`} style={{ color: '#3182ce', textDecoration: 'underline', fontWeight: 500 }}>
@@ -231,6 +268,8 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                         ''
                       )}
                     </td>
+                    <td>{tc.type}</td>
+                    <td>{tc.common_tc_ref || '-'}</td>
                     {!isReadOnly && (
                       <td>
                         <div className="action-buttons">
