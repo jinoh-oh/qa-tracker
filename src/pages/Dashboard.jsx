@@ -162,6 +162,32 @@ function Dashboard() {
 
     const depthDefectStatsMap = {};
 
+    // Initialize depthDefectStatsMap with all module/depth1 combinations from TCs
+    // so they appear even if there are 0 defects.
+    Object.keys(testCasesData).forEach(mod => {
+      const isModCommon = mod === '공통TC' || mod === '공통';
+      if (isModCommon) return;
+      if (EXCLUDED_MODULES.includes(mod)) return;
+
+      const modTcs = (testCasesData[mod] || {})[selectedRound] || [];
+      if (!depthDefectStatsMap[mod]) {
+        depthDefectStatsMap[mod] = {
+          depth1s: {},
+          severities: { Blocker: 0, Critical: 0, Major: 0, Minor: 0 }
+        };
+      }
+      
+      modTcs.forEach(tc => {
+        const d1 = tc.depth1 || '미지정';
+        if (!depthDefectStatsMap[mod].depth1s[d1]) {
+          depthDefectStatsMap[mod].depth1s[d1] = {
+            depth1: d1,
+            total: 0, unresolved: 0, open: 0, in_progress: 0, resolved: 0, closed: 0
+          };
+        }
+      });
+    });
+
     (defectsData || []).forEach(df => {
       if ((df.round || 1) !== selectedRound) return;
 
