@@ -8,7 +8,7 @@ function Dashboard() {
   const { testCasesData, defectsData, modules } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState('tc');
 
-  const { dashboardStats, moduleStats, defectTotals, defectStatsByModule, defectSeverityData, defectStatusData, defectTrendData } = useMemo(() => {
+  const { dashboardStats, moduleStats, defectTotals, defectStatsByModule, defectSeverityData, defectStatusData, defectTrendData, depthTcStats, depthDefectStats } = useMemo(() => {
     const EXCLUDED_MODULES = ['SCREEN_RULE', 'Reference'];
     let totalTC = 0;
     let excludedTC = 0; // This means "공통 제외 TC"
@@ -18,6 +18,7 @@ function Dashboard() {
     let blocked = 0;
     
     const mStats = [];
+    const depthTcStatsMap = {};
 
     const activeModuleIds = modules.map(m => m.id);
     const validModules = modules.map(m => m.id).filter(mod => testCasesData[mod]);
@@ -27,6 +28,7 @@ function Dashboard() {
 
       const tcs = testCasesData[moduleName];
       const isCommonModule = moduleName === '공통TC' || moduleName === '공통';
+      const moduleLabel = modules.find(m => m.id === moduleName)?.label || moduleName;
       
       let mTotalCount = 0;
       let mExcludedCount = 0;
@@ -53,6 +55,30 @@ function Dashboard() {
         else if (tc.result === 'Fail') { fail++; mFail++; }
         else if (tc.result === 'N/A') { na++; mNa++; }
         else if (tc.result === 'Blocked') { blocked++; mBlocked++; }
+
+        // Depth 1 TC Stats
+        const d1 = tc.depth1 || '미지정';
+        if (!depthTcStatsMap[d1]) depthTcStatsMap[d1] = {};
+        if (!depthTcStatsMap[d1][moduleName]) {
+          depthTcStatsMap[d1][moduleName] = { 
+            moduleId: moduleName, module: moduleLabel,
+            total: 0, excluded: 0, pass: 0, fail: 0, na: 0, blocked: 0 
+          };
+        }
+        
+        const dStats = depthTcStatsMap[d1][moduleName];
+        if (isCommonModule) {
+          if (tc.type !== 'BIZ') dStats.total++;
+          dStats.excluded++;
+        } else {
+          dStats.total++;
+          if (tc.type === 'BIZ') dStats.excluded++;
+        }
+        
+        if (tc.result === 'Pass') { dStats.pass++; }
+        else if (tc.result === 'Fail') { dStats.fail++; }
+        else if (tc.result === 'N/A') { dStats.na++; }
+        else if (tc.result === 'Blocked') { dStats.blocked++; }
       });
 
       totalTC += mTotalCount;
@@ -60,8 +86,6 @@ function Dashboard() {
 
       const processedTC = mPass + mFail;
       const mProgress = mTotalCount > 0 ? Math.round((processedTC / mTotalCount) * 100) : 0;
-
-      const moduleLabel = modules.find(m => m.id === moduleName)?.label || moduleName;
 
       mStats.push({
         moduleId: moduleName,
@@ -79,11 +103,24 @@ function Dashboard() {
     const totalProcessed = pass + fail;
     const progress = totalTC > 0 ? Math.round((totalProcessed / totalTC) * 100) : 0;
 
+    const processedDepthTcStats = Object.keys(depthTcStatsMap).sort().map(d1 => {
+      const mStatsArray = Object.values(depthTcStatsMap[d1]).map(stat => {
+        const processed = stat.pass + stat.fail;
+        stat.progress = stat.total > 0 ? Math.round((processed / stat.total) * 100) : 0;
+        return stat;
+      });
+      return { depth1: d1, moduleStats: mStatsArray };
+    });
+
     // Defect Metrics
     const tcToModule = {};
+    const tcToDepth1 = {};
     Object.keys(testCasesData).forEach(mod => {
       testCasesData[mod].forEach(tc => {
-        if (tc.tc_id) tcToModule[tc.tc_id] = mod;
+        if (tc.tc_id) {
+          tcToModule[tc.tc_id] = mod;
+          tcToDepth1[tc.tc_id] = tc.depth1 || '미지정';
+        }
       });
     });
 
@@ -105,6 +142,8 @@ function Dashboard() {
     let totalUnresolved = 0;
     let totalBlockers = 0;
 
+    const depthDefectStatsMap = {};
+
     (defectsData || []).forEach(df => {
       let assignedMod = tcToModule[df.tc_id];
       if (!assignedMod && df.defect_id) {
@@ -116,6 +155,8 @@ function Dashboard() {
       if (!assignedMod || !defectStats[assignedMod]) {
         assignedMod = '기타';
       }
+
+      let d1 = tcToDepth1[df.tc_id] || '미지정';
 
       defectStats[assignedMod].total++;
       totalDefects++;
@@ -141,6 +182,35 @@ function Dashboard() {
         defectStats[assignedMod].unresolved++;
         totalUnresolved++;
       }
+
+      // Depth 1 Defect Stats
+      if (!depthDefectStatsMap[d1]) {
+        depthDefectStatsMap[d1] = {
+           modules: {},
+           severities: { Blocker: 0, Critical: 0, Major: 0, Minor: 0 }
+        };
+      }
+      
+      const dDefect = depthDefectStatsMap[d1];
+      if (!dDefect.modules[assignedMod]) {
+         dDefect.modules[assignedMod] = {
+            module: modules.find(m => m.id === assignedMod)?.label || (assignedMod === '기타' ? '기타 (미매핑)' : assignedMod),
+            total: 0, unresolved: 0, open: 0, in_progress: 0, resolved: 0, closed: 0
+         };
+      }
+
+      const modStat = dDefect.modules[assignedMod];
+      modStat.total++;
+      if (dDefect.severities[df.severity] !== undefined) dDefect.severities[df.severity]++;
+      
+      if (df.status === 'Open') modStat.open++;
+      else if (df.status === 'In Progress') modStat.in_progress++;
+      else if (df.status === 'Resolved') modStat.resolved++;
+      else if (df.status === 'Closed') modStat.closed++;
+
+      if (df.status === 'Open' || df.status === 'In Progress') {
+         modStat.unresolved++;
+      }
     });
 
     // Format trend data for chart
@@ -157,6 +227,21 @@ function Dashboard() {
       delete defectStats['기타'];
     }
 
+    const processedDepthDefectStats = Object.keys(depthDefectStatsMap).sort().map(d1 => {
+      const data = depthDefectStatsMap[d1];
+      const mArray = Object.values(data.modules);
+      
+      const top5 = [...mArray].sort((a, b) => b.total - a.total).slice(0, 5);
+      const sevArray = Object.keys(data.severities).map(k => ({ name: k, value: data.severities[k] }));
+
+      return {
+         depth1: d1,
+         moduleStats: mArray,
+         top5: top5,
+         severityData: sevArray
+      };
+    });
+
     return {
       dashboardStats: { totalTC, excludedTC, pass, fail, na, blocked, progress },
       moduleStats: mStats,
@@ -164,7 +249,9 @@ function Dashboard() {
       defectStatsByModule: Object.values(defectStats),
       defectSeverityData: severityData,
       defectStatusData: statusData,
-      defectTrendData: trendData
+      defectTrendData: trendData,
+      depthTcStats: processedDepthTcStats,
+      depthDefectStats: processedDepthDefectStats
     };
   }, [testCasesData, defectsData, modules]);
 
@@ -299,6 +386,94 @@ function Dashboard() {
               </div>
             </div>
           </div>
+
+          {depthTcStats.length > 0 && depthTcStats.map((depthData, depthIdx) => (
+            <div key={`depth-tc-${depthIdx}`} style={{ marginTop: '48px', paddingTop: '24px', borderTop: '2px solid var(--border)' }}>
+              <h2 style={{ marginBottom: '24px', color: 'var(--primary)' }}>[{depthData.depth1}] 영역 진행 현황</h2>
+              
+              <div className="chart-card" style={{marginBottom: '24px'}}>
+                <h3>[{depthData.depth1}] 업무영역별 진행 현황</h3>
+                <div className="table-responsive">
+                  <table className="summary-table">
+                    <thead>
+                      <tr>
+                        <th>업무영역</th>
+                        <th style={{textAlign: 'center'}}>총 TC</th>
+                        <th style={{textAlign: 'center'}}>공통 제외 TC</th>
+                        <th style={{textAlign: 'center'}}>Pass</th>
+                        <th style={{textAlign: 'center'}}>Fail</th>
+                        <th style={{textAlign: 'center'}}>N/A</th>
+                        <th style={{textAlign: 'center'}}>Blocked</th>
+                        <th style={{textAlign: 'center', width: '230px'}}>진행률</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {depthData.moduleStats.length > 0 ? (
+                        depthData.moduleStats.map((row, idx) => (
+                          <tr key={idx}>
+                            <td><strong>{row.module}</strong></td>
+                            <td style={{textAlign: 'center'}}>{row.total}</td>
+                            <td style={{textAlign: 'center'}}>{row.excluded}</td>
+                            <td className="text-pass fw-bold" style={{textAlign: 'center'}}>{row.pass}</td>
+                            <td className="text-fail fw-bold" style={{textAlign: 'center'}}>{row.fail}</td>
+                            <td className="text-muted" style={{textAlign: 'center'}}>{row.na}</td>
+                            <td className="text-warning fw-bold" style={{textAlign: 'center'}}>{row.blocked}</td>
+                            <td style={{textAlign: 'center'}}>
+                              <div className="progress-bar-container">
+                                <div className="progress-track">
+                                  <div className="progress-bar" style={{ width: `${row.progress}%` }}></div>
+                                </div>
+                                <span className="progress-text">{row.progress}%</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="8" style={{textAlign: 'center', padding: '20px', color: 'var(--text-muted)'}}>
+                            데이터가 없습니다.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="charts-grid-2col">
+                <div className="chart-card">
+                  <h3>[{depthData.depth1}] 진행률 현황</h3>
+                  <div className="chart-container">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={depthData.moduleStats} margin={{ top: 20, right: 30, left: 0, bottom: 25 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="module" angle={-45} textAnchor="end" height={60} interval={0} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="progress" name="진행률" fill="#3182ce" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                
+                <div className="chart-card">
+                  <h3>[{depthData.depth1}] Pass / Fail 현황</h3>
+                  <div className="chart-container">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={depthData.moduleStats} margin={{ top: 20, right: 30, left: 0, bottom: 25 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="module" angle={-45} textAnchor="end" height={60} interval={0} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="pass" name="Pass" fill="#38a169" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="fail" name="Fail" fill="#e53e3e" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </>
       )}
 
@@ -444,6 +619,115 @@ function Dashboard() {
               </ResponsiveContainer>
             </div>
           </div>
+
+          {depthDefectStats.length > 0 && depthDefectStats.map((depthData, depthIdx) => (
+            <div key={`depth-defect-${depthIdx}`} style={{ marginTop: '48px', paddingTop: '24px', borderTop: '2px solid var(--border)' }}>
+              <h2 style={{ marginBottom: '24px', color: '#c53030' }}>[{depthData.depth1}] 결함 현황 지표</h2>
+              
+              <div className="chart-card" style={{marginBottom: '24px'}}>
+                <h3>[{depthData.depth1}] 업무영역별 결함 현황</h3>
+                <div className="table-responsive">
+                  <table className="summary-table">
+                    <thead>
+                      <tr>
+                        <th>업무영역</th>
+                        <th style={{textAlign: 'center'}}>총 결함 발견</th>
+                        <th style={{textAlign: 'center'}}>미조치 (Open/In Progress)</th>
+                        <th style={{textAlign: 'center'}}>Open</th>
+                        <th style={{textAlign: 'center'}}>In Progress</th>
+                        <th style={{textAlign: 'center'}}>Resolved</th>
+                        <th style={{textAlign: 'center'}}>Closed</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {depthData.moduleStats && depthData.moduleStats.length > 0 ? (
+                        depthData.moduleStats.map((row, idx) => (
+                          <tr key={idx}>
+                            <td><strong>{row.module}</strong></td>
+                            <td className="fw-bold" style={{textAlign: 'center'}}>{row.total}</td>
+                            <td className="fw-bold" style={{color: row.unresolved > 0 ? '#dd6b20' : '#4a5568', textAlign: 'center'}}>{row.unresolved}</td>
+                            <td style={{color: row.open > 0 ? '#c53030' : 'inherit', textAlign: 'center'}}>{row.open}</td>
+                            <td style={{color: row.in_progress > 0 ? '#dd6b20' : 'inherit', textAlign: 'center'}}>{row.in_progress}</td>
+                            <td style={{color: row.resolved > 0 ? '#319795' : 'inherit', textAlign: 'center'}}>{row.resolved}</td>
+                            <td style={{color: row.closed > 0 ? '#38a169' : 'inherit', textAlign: 'center'}}>{row.closed}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="7" style={{textAlign: 'center', padding: '20px', color: 'var(--text-muted)'}}>
+                            데이터가 없습니다.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="chart-card" style={{marginTop: '24px'}}>
+                <h3>[{depthData.depth1}] 업무영역별 결함 상세 지표</h3>
+                <div className="chart-container">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={depthData.moduleStats} margin={{ top: 20, right: 30, left: 0, bottom: 25 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="module" angle={-45} textAnchor="end" height={60} interval={0} />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="total" name="총 결함 발견" fill="#c53030" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="unresolved" name="미조치 상태 (Open + In Progress)" fill="#dd6b20" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="charts-grid-2col" style={{marginTop: '24px'}}>
+                <div className="chart-card">
+                  <h3>[{depthData.depth1}] 심각도(Severity) 분포</h3>
+                  <div className="chart-container">
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={depthData.severityData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {[
+                            { name: 'Blocker', color: '#742a2a' },
+                            { name: 'Critical', color: '#c53030' },
+                            { name: 'Major', color: '#dd6b20' },
+                            { name: 'Minor', color: '#3182ce' }
+                          ].map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="chart-card">
+                  <h3>[{depthData.depth1}] 업무영역별 결함 분포 (Top 5)</h3>
+                  <div className="chart-container">
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={depthData.top5} layout="vertical" margin={{ left: 20, right: 30 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                        <XAxis type="number" />
+                        <YAxis dataKey="module" type="category" width={100} />
+                        <Tooltip />
+                        <Bar dataKey="total" name="결함 수" fill="#dd6b20" radius={[0, 4, 4, 0]} barSize={20} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </>
       )}
     </div>
