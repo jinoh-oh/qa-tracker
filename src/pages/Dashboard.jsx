@@ -72,29 +72,26 @@ function Dashboard() {
         else if (tc.result === 'N/A') { na++; mNa++; }
         else if (tc.result === 'Blocked') { blocked++; mBlocked++; }
 
-        // Depth 1 TC Stats
-        const d1 = tc.depth1 || '미지정';
-        if (!depthTcStatsMap[d1]) depthTcStatsMap[d1] = {};
-        if (!depthTcStatsMap[d1][moduleName]) {
-          depthTcStatsMap[d1][moduleName] = { 
-            moduleId: moduleName, module: moduleLabel,
-            total: 0, excluded: 0, pass: 0, fail: 0, na: 0, blocked: 0 
-          };
-        }
-        
-        const dStats = depthTcStatsMap[d1][moduleName];
-        if (isCommonModule) {
-          if (tc.type !== 'BIZ') dStats.total++;
-          dStats.excluded++;
-        } else {
+        // Depth 1 TC Stats (Exclude common modules)
+        if (!isCommonModule) {
+          const d1 = tc.depth1 || '미지정';
+          if (!depthTcStatsMap[moduleName]) depthTcStatsMap[moduleName] = {};
+          if (!depthTcStatsMap[moduleName][d1]) {
+            depthTcStatsMap[moduleName][d1] = { 
+              depth1: d1,
+              total: 0, excluded: 0, pass: 0, fail: 0, na: 0, blocked: 0 
+            };
+          }
+          
+          const dStats = depthTcStatsMap[moduleName][d1];
           dStats.total++;
           if (tc.type === 'BIZ') dStats.excluded++;
+          
+          if (tc.result === 'Pass') { dStats.pass++; }
+          else if (tc.result === 'Fail') { dStats.fail++; }
+          else if (tc.result === 'N/A') { dStats.na++; }
+          else if (tc.result === 'Blocked') { dStats.blocked++; }
         }
-        
-        if (tc.result === 'Pass') { dStats.pass++; }
-        else if (tc.result === 'Fail') { dStats.fail++; }
-        else if (tc.result === 'N/A') { dStats.na++; }
-        else if (tc.result === 'Blocked') { dStats.blocked++; }
       });
 
       totalTC += mTotalCount;
@@ -119,13 +116,14 @@ function Dashboard() {
     const totalProcessed = pass + fail;
     const progress = totalTC > 0 ? Math.round((totalProcessed / totalTC) * 100) : 0;
 
-    const processedDepthTcStats = Object.keys(depthTcStatsMap).sort().map(d1 => {
-      const mStatsArray = Object.values(depthTcStatsMap[d1]).map(stat => {
+    const processedDepthTcStats = Object.keys(depthTcStatsMap).sort().map(mod => {
+      const modLabel = modules.find(m => m.id === mod)?.label || mod;
+      const depthStatsArray = Object.values(depthTcStatsMap[mod]).map(stat => {
         const processed = stat.pass + stat.fail;
         stat.progress = stat.total > 0 ? Math.round((processed / stat.total) * 100) : 0;
         return stat;
       });
-      return { depth1: d1, moduleStats: mStatsArray };
+      return { moduleId: mod, moduleLabel: modLabel, depthStats: depthStatsArray };
     });
 
     // Defect Metrics
@@ -203,33 +201,36 @@ function Dashboard() {
         totalUnresolved++;
       }
 
-      // Depth 1 Defect Stats
-      if (!depthDefectStatsMap[d1]) {
-        depthDefectStatsMap[d1] = {
-           modules: {},
-           severities: { Blocker: 0, Critical: 0, Major: 0, Minor: 0 }
-        };
-      }
-      
-      const dDefect = depthDefectStatsMap[d1];
-      if (!dDefect.modules[assignedMod]) {
-         dDefect.modules[assignedMod] = {
-            module: modules.find(m => m.id === assignedMod)?.label || (assignedMod === '기타' ? '기타 (미매핑)' : assignedMod),
-            total: 0, unresolved: 0, open: 0, in_progress: 0, resolved: 0, closed: 0
-         };
-      }
+      // Depth 1 Defect Stats (Exclude Common Modules)
+      const isDefectCommonModule = assignedMod === '공통TC' || assignedMod === '공통';
+      if (!isDefectCommonModule) {
+        if (!depthDefectStatsMap[assignedMod]) {
+          depthDefectStatsMap[assignedMod] = {
+             depth1s: {},
+             severities: { Blocker: 0, Critical: 0, Major: 0, Minor: 0 }
+          };
+        }
+        
+        const dDefect = depthDefectStatsMap[assignedMod];
+        if (!dDefect.depth1s[d1]) {
+           dDefect.depth1s[d1] = {
+              depth1: d1,
+              total: 0, unresolved: 0, open: 0, in_progress: 0, resolved: 0, closed: 0
+           };
+        }
 
-      const modStat = dDefect.modules[assignedMod];
-      modStat.total++;
-      if (dDefect.severities[df.severity] !== undefined) dDefect.severities[df.severity]++;
-      
-      if (df.status === 'Open') modStat.open++;
-      else if (df.status === 'In Progress') modStat.in_progress++;
-      else if (df.status === 'Resolved') modStat.resolved++;
-      else if (df.status === 'Closed') modStat.closed++;
+        const dStat = dDefect.depth1s[d1];
+        dStat.total++;
+        if (dDefect.severities[df.severity] !== undefined) dDefect.severities[df.severity]++;
+        
+        if (df.status === 'Open') dStat.open++;
+        else if (df.status === 'In Progress') dStat.in_progress++;
+        else if (df.status === 'Resolved') dStat.resolved++;
+        else if (df.status === 'Closed') dStat.closed++;
 
-      if (df.status === 'Open' || df.status === 'In Progress') {
-         modStat.unresolved++;
+        if (df.status === 'Open' || df.status === 'In Progress') {
+           dStat.unresolved++;
+        }
       }
     });
 
@@ -247,16 +248,18 @@ function Dashboard() {
       delete defectStats['기타'];
     }
 
-    const processedDepthDefectStats = Object.keys(depthDefectStatsMap).sort().map(d1 => {
-      const data = depthDefectStatsMap[d1];
-      const mArray = Object.values(data.modules);
+    const processedDepthDefectStats = Object.keys(depthDefectStatsMap).sort().map(mod => {
+      const modLabel = modules.find(m => m.id === mod)?.label || mod;
+      const data = depthDefectStatsMap[mod];
+      const dArray = Object.values(data.depth1s);
       
-      const top5 = [...mArray].sort((a, b) => b.total - a.total).slice(0, 5);
+      const top5 = [...dArray].sort((a, b) => b.total - a.total).slice(0, 5);
       const sevArray = Object.keys(data.severities).map(k => ({ name: k, value: data.severities[k] }));
 
       return {
-         depth1: d1,
-         moduleStats: mArray,
+         moduleId: mod,
+         moduleLabel: modLabel,
+         depthStats: dArray,
          top5: top5,
          severityData: sevArray
       };
@@ -421,15 +424,15 @@ function Dashboard() {
 
           {depthTcStats.length > 0 && depthTcStats.map((depthData, depthIdx) => (
             <div key={`depth-tc-${depthIdx}`} style={{ marginTop: '48px', paddingTop: '24px', borderTop: '2px solid var(--border)' }}>
-              <h2 style={{ marginBottom: '24px', color: 'var(--primary)' }}>[{depthData.depth1}] 영역 진행 현황</h2>
+              <h2 style={{ marginBottom: '24px', color: 'var(--primary)' }}>[{depthData.moduleLabel}] 영역 진행 현황</h2>
               
               <div className="chart-card" style={{marginBottom: '24px'}}>
-                <h3>[{depthData.depth1}] 업무영역별 진행 현황</h3>
+                <h3>[{depthData.moduleLabel}] 1 Depth별 진행 현황</h3>
                 <div className="table-responsive">
                   <table className="summary-table">
                     <thead>
                       <tr>
-                        <th>업무영역</th>
+                        <th>1 Depth</th>
                         <th style={{textAlign: 'center'}}>총 TC</th>
                         <th style={{textAlign: 'center'}}>공통 제외 TC</th>
                         <th style={{textAlign: 'center'}}>Pass</th>
@@ -440,10 +443,10 @@ function Dashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {depthData.moduleStats.length > 0 ? (
-                        depthData.moduleStats.map((row, idx) => (
+                      {depthData.depthStats.length > 0 ? (
+                        depthData.depthStats.map((row, idx) => (
                           <tr key={idx}>
-                            <td><strong>{row.module}</strong></td>
+                            <td><strong>{row.depth1}</strong></td>
                             <td style={{textAlign: 'center'}}>{row.total}</td>
                             <td style={{textAlign: 'center'}}>{row.excluded}</td>
                             <td className="text-pass fw-bold" style={{textAlign: 'center'}}>{row.pass}</td>
@@ -474,12 +477,12 @@ function Dashboard() {
 
               <div className="charts-grid-2col">
                 <div className="chart-card">
-                  <h3>[{depthData.depth1}] 진행률 현황</h3>
+                  <h3>[{depthData.moduleLabel}] 진행률 현황</h3>
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={depthData.moduleStats} margin={{ top: 20, right: 30, left: 0, bottom: 25 }}>
+                      <BarChart data={depthData.depthStats} margin={{ top: 20, right: 30, left: 0, bottom: 25 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="module" angle={-45} textAnchor="end" height={60} interval={0} />
+                        <XAxis dataKey="depth1" angle={-45} textAnchor="end" height={60} interval={0} />
                         <YAxis />
                         <Tooltip />
                         <Bar dataKey="progress" name="진행률" fill="#3182ce" radius={[4, 4, 0, 0]} />
@@ -489,12 +492,12 @@ function Dashboard() {
                 </div>
                 
                 <div className="chart-card">
-                  <h3>[{depthData.depth1}] Pass / Fail 현황</h3>
+                  <h3>[{depthData.moduleLabel}] Pass / Fail 현황</h3>
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={depthData.moduleStats} margin={{ top: 20, right: 30, left: 0, bottom: 25 }}>
+                      <BarChart data={depthData.depthStats} margin={{ top: 20, right: 30, left: 0, bottom: 25 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="module" angle={-45} textAnchor="end" height={60} interval={0} />
+                        <XAxis dataKey="depth1" angle={-45} textAnchor="end" height={60} interval={0} />
                         <YAxis />
                         <Tooltip />
                         <Bar dataKey="pass" name="Pass" fill="#38a169" radius={[4, 4, 0, 0]} />
@@ -654,15 +657,15 @@ function Dashboard() {
 
           {depthDefectStats.length > 0 && depthDefectStats.map((depthData, depthIdx) => (
             <div key={`depth-defect-${depthIdx}`} style={{ marginTop: '48px', paddingTop: '24px', borderTop: '2px solid var(--border)' }}>
-              <h2 style={{ marginBottom: '24px', color: '#c53030' }}>[{depthData.depth1}] 결함 현황 지표</h2>
+              <h2 style={{ marginBottom: '24px', color: '#c53030' }}>[{depthData.moduleLabel}] 결함 현황 지표</h2>
               
               <div className="chart-card" style={{marginBottom: '24px'}}>
-                <h3>[{depthData.depth1}] 업무영역별 결함 현황</h3>
+                <h3>[{depthData.moduleLabel}] 1 Depth별 결함 현황</h3>
                 <div className="table-responsive">
                   <table className="summary-table">
                     <thead>
                       <tr>
-                        <th>업무영역</th>
+                        <th>1 Depth</th>
                         <th style={{textAlign: 'center'}}>총 결함 발견</th>
                         <th style={{textAlign: 'center'}}>미조치 (Open/In Progress)</th>
                         <th style={{textAlign: 'center'}}>Open</th>
@@ -672,10 +675,10 @@ function Dashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {depthData.moduleStats && depthData.moduleStats.length > 0 ? (
-                        depthData.moduleStats.map((row, idx) => (
+                      {depthData.depthStats && depthData.depthStats.length > 0 ? (
+                        depthData.depthStats.map((row, idx) => (
                           <tr key={idx}>
-                            <td><strong>{row.module}</strong></td>
+                            <td><strong>{row.depth1}</strong></td>
                             <td className="fw-bold" style={{textAlign: 'center'}}>{row.total}</td>
                             <td className="fw-bold" style={{color: row.unresolved > 0 ? '#dd6b20' : '#4a5568', textAlign: 'center'}}>{row.unresolved}</td>
                             <td style={{color: row.open > 0 ? '#c53030' : 'inherit', textAlign: 'center'}}>{row.open}</td>
@@ -697,12 +700,12 @@ function Dashboard() {
               </div>
 
               <div className="chart-card" style={{marginTop: '24px'}}>
-                <h3>[{depthData.depth1}] 업무영역별 결함 상세 지표</h3>
+                <h3>[{depthData.moduleLabel}] 1 Depth별 결함 상세 지표</h3>
                 <div className="chart-container">
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={depthData.moduleStats} margin={{ top: 20, right: 30, left: 0, bottom: 25 }}>
+                    <BarChart data={depthData.depthStats} margin={{ top: 20, right: 30, left: 0, bottom: 25 }}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="module" angle={-45} textAnchor="end" height={60} interval={0} />
+                      <XAxis dataKey="depth1" angle={-45} textAnchor="end" height={60} interval={0} />
                       <YAxis />
                       <Tooltip />
                       <Bar dataKey="total" name="총 결함 발견" fill="#c53030" radius={[4, 4, 0, 0]} />
@@ -714,7 +717,7 @@ function Dashboard() {
 
               <div className="charts-grid-2col" style={{marginTop: '24px'}}>
                 <div className="chart-card">
-                  <h3>[{depthData.depth1}] 심각도(Severity) 분포</h3>
+                  <h3>[{depthData.moduleLabel}] 심각도(Severity) 분포</h3>
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height={250}>
                       <PieChart>
@@ -744,13 +747,13 @@ function Dashboard() {
                 </div>
 
                 <div className="chart-card">
-                  <h3>[{depthData.depth1}] 업무영역별 결함 분포 (Top 5)</h3>
+                  <h3>[{depthData.moduleLabel}] 1 Depth별 결함 분포 (Top 5)</h3>
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height={250}>
                       <BarChart data={depthData.top5} layout="vertical" margin={{ left: 20, right: 30 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
                         <XAxis type="number" />
-                        <YAxis dataKey="module" type="category" width={100} />
+                        <YAxis dataKey="depth1" type="category" width={100} />
                         <Tooltip />
                         <Bar dataKey="total" name="결함 수" fill="#dd6b20" radius={[0, 4, 4, 0]} barSize={20} />
                       </BarChart>
