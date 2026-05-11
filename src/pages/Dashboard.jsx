@@ -116,7 +116,9 @@ function Dashboard() {
     const totalProcessed = pass + fail;
     const progress = totalTC > 0 ? Math.round((totalProcessed / totalTC) * 100) : 0;
 
-    const processedDepthTcStats = Object.keys(depthTcStatsMap).sort().map(mod => {
+    const processedDepthTcStats = Object.keys(depthTcStatsMap)
+      .sort((a, b) => validModules.indexOf(a) - validModules.indexOf(b))
+      .map(mod => {
       const modLabel = modules.find(m => m.id === mod)?.label || mod;
       const depthStatsArray = Object.values(depthTcStatsMap[mod]).map(stat => {
         const processed = stat.pass + stat.fail;
@@ -248,7 +250,9 @@ function Dashboard() {
       delete defectStats['기타'];
     }
 
-    const processedDepthDefectStats = Object.keys(depthDefectStatsMap).sort().map(mod => {
+    const processedDepthDefectStats = Object.keys(depthDefectStatsMap)
+      .sort((a, b) => validModules.indexOf(a) - validModules.indexOf(b))
+      .map(mod => {
       const modLabel = modules.find(m => m.id === mod)?.label || mod;
       const data = depthDefectStatsMap[mod];
       const dArray = Object.values(data.depth1s);
