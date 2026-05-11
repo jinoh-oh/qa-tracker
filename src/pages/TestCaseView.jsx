@@ -9,7 +9,7 @@ import './TestCaseView.css';
 
 function TestCaseView() {
   const { moduleName } = useParams();
-  const { testCasesData, updateTestCase, addTestCase, deleteTestCase, bulkDeleteTestCases, appendTestCasesFromExcel, createNextRound, isReadOnly } = useContext(AppContext);
+  const { testCasesData, updateTestCase, addTestCase, deleteTestCase, bulkDeleteTestCases, appendTestCasesFromExcel, createNextRound, deleteRound, isReadOnly } = useContext(AppContext);
   const fileInputRef = useRef(null);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -281,6 +281,20 @@ function TestCaseView() {
               style={{ padding: '6px 16px', background: 'transparent', color: 'var(--primary)', border: '1px dashed var(--primary)', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}
             >
               + 차수 추가
+            </button>
+          )}
+          {!isReadOnly && maxRound > 1 && currentRound === maxRound && (
+            <button 
+              onClick={() => {
+                if (window.confirm(`${maxRound}차 테스트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+                  deleteRound(moduleName, maxRound);
+                  setCurrentRound(maxRound - 1);
+                }
+              }}
+              style={{ padding: '6px 16px', background: 'transparent', color: '#e53e3e', border: '1px dashed #e53e3e', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', marginLeft: 'auto' }}
+              title="최신 차수 삭제"
+            >
+              차수 삭제
             </button>
           )}
         </div>

@@ -377,6 +377,21 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  const deleteRound = (moduleName, roundToDelete) => {
+    if (roundToDelete === 1) {
+      alert("1차 테스트는 기본 데이터이므로 삭제할 수 없습니다.");
+      return;
+    }
+    setTestCasesData(prev => {
+      const moduleData = { ...prev[moduleName] };
+      delete moduleData[roundToDelete];
+      return {
+        ...prev,
+        [moduleName]: moduleData
+      };
+    });
+  };
+
   // Defects Helpers
   const addDefect = (newDefect) => {
     setDefectsData(prev => [...prev, newDefect]);
@@ -460,6 +475,7 @@ export const AppProvider = ({ children }) => {
       bulkDeleteTestCases,
       appendTestCasesFromExcel,
       createNextRound,
+      deleteRound,
       addDefect,
       updateDefect,
       deleteDefect,
