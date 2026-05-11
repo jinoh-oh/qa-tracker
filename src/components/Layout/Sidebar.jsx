@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, CheckSquare, Search, BookOpen, Settings, Database } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Search, BookOpen, Settings, Database, BarChart2 } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
 import './Sidebar.css';
 
@@ -25,6 +25,10 @@ function Sidebar() {
         <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <LayoutDashboard size={18} />
           <span>DASHBOARD</span>
+        </NavLink>
+        <NavLink to="/comparison" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <BarChart2 size={18} />
+          <span>차수별 결과 비교</span>
         </NavLink>
         
         {modules.map((mod) => (

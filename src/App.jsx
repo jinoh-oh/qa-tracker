@@ -8,6 +8,7 @@ import ScreenRuleView from './pages/ScreenRuleView'
 import DefectTrackerView from './pages/DefectTrackerView'
 import LoginView from './pages/LoginView'
 import SettingsView from './pages/SettingsView'
+import RoundComparisonView from './pages/RoundComparisonView'
 import { AppProvider, AppContext } from './context/AppContext'
 
 import { ArrowUp } from 'lucide-react';
@@ -60,6 +61,7 @@ function AppContent() {
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/comparison" element={<RoundComparisonView />} />
               <Route path="/module/SCREEN_RULE" element={<ScreenRuleView />} />
               <Route path="/defects" element={<DefectTrackerView />} />
               <Route path="/module/ADMIN" element={<SettingsView />} />
