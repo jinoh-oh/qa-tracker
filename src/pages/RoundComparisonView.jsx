@@ -213,7 +213,7 @@ function RoundComparisonView() {
                   <th style={{ minWidth: '120px' }}>1 Depth</th>
                   <th style={{ minWidth: '250px' }}>Scenario</th>
                   {availableRounds.map(r => (
-                    <th key={r} style={{ textAlign: 'center', minWidth: '180px', backgroundColor: '#edf2f7', borderLeft: '2px solid #cbd5e0' }}>
+                    <th key={r} style={{ textAlign: 'center', minWidth: '180px', backgroundColor: '#edf2f7', color: '#2d3748', borderLeft: '2px solid #cbd5e0' }}>
                       {r}차 결과
                     </th>
                   ))}
