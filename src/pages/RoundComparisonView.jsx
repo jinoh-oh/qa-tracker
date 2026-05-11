@@ -13,22 +13,24 @@ function RoundComparisonView() {
   const validModules = modules.filter(m => !EXCLUDED_MODULES.includes(m.id));
   
   const [selectedModule, setSelectedModule] = useState(validModules.length > 0 ? validModules[0].id : '');
+  const [selectedDepth, setSelectedDepth] = useState('전체');
 
-  // Extract all rounds and unique TCs for the selected module
-  const { availableRounds, uniqueTCs } = useMemo(() => {
+  // Extract all rounds, unique TCs, and unique Depths for the selected module
+  const { availableRounds, allTCs, availableDepths } = useMemo(() => {
     if (!selectedModule || !testCasesData[selectedModule]) {
-      return { availableRounds: [], uniqueTCs: [] };
+      return { availableRounds: [], allTCs: [], availableDepths: [] };
     }
 
     const moduleData = testCasesData[selectedModule];
     const rounds = Object.keys(moduleData).map(Number).sort((a, b) => a - b);
     
-    // Use a Map to keep the latest representation of each TC (e.g. Scenario, 1 Depth)
     const tcMap = new Map();
+    const depths = new Set(['전체']);
     
     rounds.forEach(round => {
       const tcs = moduleData[round] || [];
       tcs.forEach(tc => {
+        if (tc.depth1) depths.add(tc.depth1);
         if (!tcMap.has(tc.tc_id)) {
           tcMap.set(tc.tc_id, {
             tc_id: tc.tc_id,
@@ -37,7 +39,6 @@ function RoundComparisonView() {
             resultsByRound: {}
           });
         }
-        // Save the result, defect, and comment for this round
         const entry = tcMap.get(tc.tc_id);
         entry.resultsByRound[round] = {
           result: tc.result,
@@ -47,8 +48,21 @@ function RoundComparisonView() {
       });
     });
 
-    return { availableRounds: rounds, uniqueTCs: Array.from(tcMap.values()) };
+    return { 
+      availableRounds: rounds, 
+      allTCs: Array.from(tcMap.values()),
+      availableDepths: Array.from(depths).sort((a, b) => {
+        if (a === '전체') return -1;
+        if (b === '전체') return 1;
+        return a.localeCompare(b);
+      })
+    };
   }, [selectedModule, testCasesData]);
+
+  const uniqueTCs = useMemo(() => {
+    if (selectedDepth === '전체') return allTCs;
+    return allTCs.filter(tc => tc.depth1 === selectedDepth);
+  }, [allTCs, selectedDepth]);
 
   const chartData = useMemo(() => {
     return availableRounds.map(round => {
@@ -143,24 +157,38 @@ function RoundComparisonView() {
 
   return (
     <div className="test-case-view animate-fade-in" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--background)' }}>
-      <div className="view-header" style={{ flexShrink: 0, paddingBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+      <div className="view-header" style={{ flexShrink: 0, paddingBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <h2 className="view-title" style={{ margin: 0 }}>차수별 결과 비교</h2>
           <select 
             value={selectedModule} 
-            onChange={(e) => setSelectedModule(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '14px', minWidth: '200px', cursor: 'pointer' }}
+            onChange={(e) => {
+              setSelectedModule(e.target.value);
+              setSelectedDepth('전체');
+            }}
+            className="select-module"
+            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '15px', fontWeight: 'bold', outline: 'none', cursor: 'pointer', backgroundColor: '#fff', minWidth: '150px' }}
           >
-            {validModules.map(mod => (
-              <option key={mod.id} value={mod.id}>{mod.label}</option>
+            {validModules.map(m => (
+              <option key={m.id} value={m.id}>{m.label}</option>
+            ))}
+          </select>
+
+          <select 
+            value={selectedDepth} 
+            onChange={(e) => setSelectedDepth(e.target.value)}
+            className="select-depth"
+            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '14px', outline: 'none', cursor: 'pointer', backgroundColor: '#fff', minWidth: '150px' }}
+          >
+            {availableDepths.map(d => (
+              <option key={d} value={d}>{d}</option>
             ))}
           </select>
         </div>
-        <div className="view-actions">
-          <button className="btn btn-outline" onClick={handleExportExcel} title="엑셀 내보내기">
-            <FileOutput size={16} style={{marginRight: '6px'}} /> 엑셀 내보내기
-          </button>
-        </div>
+        
+        <button className="btn btn-outline" onClick={handleExportExcel}>
+          <FileOutput size={16} style={{marginRight: '6px'}} /> 엑셀 내보내기
+        </button>
       </div>
 
       {uniqueTCs.length > 0 && (
