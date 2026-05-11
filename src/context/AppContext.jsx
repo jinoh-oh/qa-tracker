@@ -20,6 +20,24 @@ export const AppProvider = ({ children }) => {
   // Determine API Base: relative path for same-origin production, or localhost for cross-origin dev
   const API_BASE = '/api'; 
 
+  const migrateTestCases = (data) => {
+    if (!data || typeof data !== 'object') return {};
+    const migrated = {};
+    for (const moduleName in data) {
+      if (Array.isArray(data[moduleName])) {
+        migrated[moduleName] = { 1: data[moduleName] };
+      } else {
+        migrated[moduleName] = data[moduleName];
+      }
+    }
+    return migrated;
+  };
+
+  const migrateDefects = (data) => {
+    if (!Array.isArray(data)) return [];
+    return data.map(d => d.round ? d : { ...d, round: 1 });
+  };
+
   // Initial Load with Fallback
   useEffect(() => {
     const fetchData = async () => {
@@ -40,10 +58,10 @@ export const AppProvider = ({ children }) => {
           finalAccounts = [...data.accounts, { id: 'guest', pw: 'guest', role: 'guest', name: 'Guest User' }];
         }
 
-        setTestCasesData(data.testCasesData || {});
+        setTestCasesData(migrateTestCases(data.testCasesData));
         setModules(data.modules || []);
         setAccounts(finalAccounts);
-        setDefectsData(data.defectsData || []);
+        setDefectsData(migrateDefects(data.defectsData));
         setNotificationsData(data.notificationsData || []);
         setDepthOptions(data.depthOptions || []);
         setScreenRulesData(data.screenRulesData && data.screenRulesData.columns ? data.screenRulesData : { columns: [], rows: [] });
@@ -80,10 +98,10 @@ export const AppProvider = ({ children }) => {
           { id: 'SEARCH', label: '통합업무검색' }
         ];
 
-        setTestCasesData(getLocal('qms_testCasesData', {})); 
+        setTestCasesData(migrateTestCases(getLocal('qms_testCasesData', {}))); 
         setModules(getLocal('qms_modules', defaultModules));
         setAccounts(getLocal('qms_accounts', defaultAccounts));
-        setDefectsData(getLocal('qms_defects', []));
+        setDefectsData(migrateDefects(getLocal('qms_defects', [])));
         setNotificationsData(getLocal('qms_notifications', []));
         setDepthOptions(getLocal('qms_depth_options', ['공통', '로그인', '로그인화면', '전세', '리스트', '기본검색', '상세검색', '등록', '조회', '저장']));
         setScreenRulesData(getLocal('qms_screen_rules', { columns: [], rows: [] }));
@@ -236,38 +254,50 @@ export const AppProvider = ({ children }) => {
     setScreenRulesData(newData);
   };
 
-  const addTestCase = (moduleName, newTc) => {
+  const addTestCase = (moduleName, round, newTc) => {
     setTestCasesData(prev => {
-      const moduleData = prev[moduleName] || [];
-      return { ...prev, [moduleName]: [...moduleData, newTc] };
+      const moduleData = prev[moduleName] || { 1: [] };
+      const roundData = moduleData[round] || [];
+      return {
+        ...prev,
+        [moduleName]: {
+          ...moduleData,
+          [round]: [...roundData, newTc]
+        }
+      };
     });
   };
 
-  const updateTestCase = (moduleName, originalId, updatedTc) => {
+  const updateTestCase = (moduleName, round, originalId, updatedTc) => {
     setTestCasesData(prev => {
-      const moduleData = prev[moduleName] || [];
-      const originalTc = moduleData.find(tc => tc.tc_id === originalId);
+      const moduleData = prev[moduleName] || { 1: [] };
+      const roundData = moduleData[round] || [];
+      const originalTc = roundData.find(tc => tc.tc_id === originalId);
       
       if (originalTc && isOtherUser(originalTc.tester)) {
         addNotification({
           type: 'tc_updated',
           title: '테스트 케이스 수정됨',
           message: `${user.name}님이 ${originalTc.tester}님의 TC(${originalId})를 수정했습니다.`,
-          link: `/module/${moduleName}?tcId=${originalId}`
+          link: `/module/${moduleName}?tcId=${originalId}&round=${round}`
         });
       }
 
       return {
         ...prev,
-        [moduleName]: moduleData.map(tc => tc.tc_id === originalId ? updatedTc : tc)
+        [moduleName]: {
+          ...moduleData,
+          [round]: roundData.map(tc => tc.tc_id === originalId ? updatedTc : tc)
+        }
       };
     });
   };
 
-  const deleteTestCase = (moduleName, tcIdToDelete) => {
+  const deleteTestCase = (moduleName, round, tcIdToDelete) => {
     setTestCasesData(prev => {
-      const moduleData = prev[moduleName] || [];
-      const tcToDelete = moduleData.find(tc => tc.tc_id === tcIdToDelete);
+      const moduleData = prev[moduleName] || { 1: [] };
+      const roundData = moduleData[round] || [];
+      const tcToDelete = roundData.find(tc => tc.tc_id === tcIdToDelete);
       
       if (tcToDelete && isOtherUser(tcToDelete.tester)) {
         addNotification({
@@ -280,15 +310,19 @@ export const AppProvider = ({ children }) => {
 
       return {
         ...prev,
-        [moduleName]: moduleData.filter(tc => tc.tc_id !== tcIdToDelete)
+        [moduleName]: {
+          ...moduleData,
+          [round]: roundData.filter(tc => tc.tc_id !== tcIdToDelete)
+        }
       };
     });
   };
 
-  const bulkDeleteTestCases = (moduleName, tcIdsToDelete) => {
+  const bulkDeleteTestCases = (moduleName, round, tcIdsToDelete) => {
     setTestCasesData(prev => {
-      const moduleData = prev[moduleName] || [];
-      const toDelete = moduleData.filter(tc => tcIdsToDelete.includes(tc.tc_id));
+      const moduleData = prev[moduleName] || { 1: [] };
+      const roundData = moduleData[round] || [];
+      const toDelete = roundData.filter(tc => tcIdsToDelete.includes(tc.tc_id));
       const othersDeleted = toDelete.filter(tc => isOtherUser(tc.tester));
       
       if (othersDeleted.length > 0) {
@@ -302,15 +336,44 @@ export const AppProvider = ({ children }) => {
 
       return {
         ...prev,
-        [moduleName]: moduleData.filter(tc => !tcIdsToDelete.includes(tc.tc_id))
+        [moduleName]: {
+          ...moduleData,
+          [round]: roundData.filter(tc => !tcIdsToDelete.includes(tc.tc_id))
+        }
       };
     });
   };
 
-  const appendTestCasesFromExcel = (moduleName, newTcs) => {
+  const appendTestCasesFromExcel = (moduleName, round, newTcs) => {
     setTestCasesData(prev => {
-      const moduleData = prev[moduleName] || [];
-      return { ...prev, [moduleName]: [...moduleData, ...newTcs] };
+      const moduleData = prev[moduleName] || { 1: [] };
+      const roundData = moduleData[round] || [];
+      return {
+        ...prev,
+        [moduleName]: {
+          ...moduleData,
+          [round]: [...roundData, ...newTcs]
+        }
+      };
+    });
+  };
+
+  const createNextRound = (moduleName, currentRound) => {
+    setTestCasesData(prev => {
+      const moduleData = prev[moduleName] || { 1: [] };
+      const currentData = moduleData[currentRound] || [];
+      const nextRound = parseInt(currentRound, 10) + 1;
+      
+      // Deep clone test cases
+      const clonedData = currentData.map(tc => ({ ...tc }));
+      
+      return {
+        ...prev,
+        [moduleName]: {
+          ...moduleData,
+          [nextRound]: clonedData
+        }
+      };
     });
   };
 
@@ -396,6 +459,7 @@ export const AppProvider = ({ children }) => {
       deleteTestCase,
       bulkDeleteTestCases,
       appendTestCasesFromExcel,
+      createNextRound,
       addDefect,
       updateDefect,
       deleteDefect,

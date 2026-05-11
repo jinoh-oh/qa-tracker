@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { FileEdit, Save, X, Trash2, CheckSquare, Copy } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
 
-function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
+function TestCaseTable({ data, previousRoundData, onUpdate, onDelete, onBulkDelete, onCopy }) {
   const { depthOptions, isReadOnly } = useContext(AppContext);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -193,7 +193,11 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
             </tr>
           </thead>
           <tbody>
-            {sortedData.map((tc, index) => (
+            {sortedData.map((tc, index) => {
+              const prevTc = previousRoundData ? previousRoundData.find(p => p.tc_id === tc.tc_id) : null;
+              const isChanged = (field) => prevTc && String(prevTc[field] || '').trim() !== String(tc[field] || '').trim();
+              
+              return (
               <tr key={`row-${tc.no}-${tc.tc_id || index}`} className={selectedIds.includes(tc.tc_id) ? 'row-selected' : ''}>
                 {!isReadOnly && (
                   <td className="sticky-col checkbox-col">
@@ -244,20 +248,20 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                 ) : (
                   <>
                     <td className="tc-id-col fw-500">{tc.tc_id}</td>
-                    <td><DepthBadge val={tc.depth1} /></td>
-                    <td><DepthBadge val={tc.depth2} /></td>
-                    <td><DepthBadge val={tc.depth3} /></td>
-                    <td><DepthBadge val={tc.depth4} /></td>
-                    <td className="min-w-200">{tc.scenario}</td>
-                    <td>{getPriorityBadge(tc.priority)}</td>
-                    <td className="pre-wrap min-w-150">{tc.precondition}</td>
-                    <td className="pre-wrap min-w-250">{tc.procedure}</td>
-                    <td className="pre-wrap min-w-250">{tc.expected}</td>
-                    <td>{getResultBadge(tc.result)}</td>
-                    <td className="pre-wrap min-w-150">{tc.comment}</td>
-                    <td>{tc.tester}</td>
-                    <td>{tc.date}</td>
-                    <td>
+                    <td className={isChanged('depth1') ? 'changed-value' : ''}><DepthBadge val={tc.depth1} /></td>
+                    <td className={isChanged('depth2') ? 'changed-value' : ''}><DepthBadge val={tc.depth2} /></td>
+                    <td className={isChanged('depth3') ? 'changed-value' : ''}><DepthBadge val={tc.depth3} /></td>
+                    <td className={isChanged('depth4') ? 'changed-value' : ''}><DepthBadge val={tc.depth4} /></td>
+                    <td className={`min-w-200 ${isChanged('scenario') ? 'changed-value' : ''}`}>{tc.scenario}</td>
+                    <td className={isChanged('priority') ? 'changed-value' : ''}>{getPriorityBadge(tc.priority)}</td>
+                    <td className={`pre-wrap min-w-150 ${isChanged('precondition') ? 'changed-value' : ''}`}>{tc.precondition}</td>
+                    <td className={`pre-wrap min-w-250 ${isChanged('procedure') ? 'changed-value' : ''}`}>{tc.procedure}</td>
+                    <td className={`pre-wrap min-w-250 ${isChanged('expected') ? 'changed-value' : ''}`}>{tc.expected}</td>
+                    <td className={isChanged('result') ? 'changed-value' : ''}>{getResultBadge(tc.result)}</td>
+                    <td className={`pre-wrap min-w-150 ${isChanged('comment') ? 'changed-value' : ''}`}>{tc.comment}</td>
+                    <td className={isChanged('tester') ? 'changed-value' : ''}>{tc.tester}</td>
+                    <td className={isChanged('date') ? 'changed-value' : ''}>{tc.date}</td>
+                    <td className={isChanged('defect_id') ? 'changed-value' : ''}>
                       {tc.defect_id ? (
                         <Link to={`/defects?defectId=${tc.defect_id}`} style={{ color: '#3182ce', textDecoration: 'underline', fontWeight: 500 }}>
                           {tc.defect_id}
@@ -266,8 +270,8 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                         ''
                       )}
                     </td>
-                    <td>{tc.type}</td>
-                    <td>{tc.common_tc_ref || '-'}</td>
+                    <td className={isChanged('type') ? 'changed-value' : ''}>{tc.type}</td>
+                    <td className={isChanged('common_tc_ref') ? 'changed-value' : ''}>{tc.common_tc_ref || '-'}</td>
                     {!isReadOnly && (
                       <td>
                         <div className="action-buttons">
@@ -280,7 +284,7 @@ function TestCaseTable({ data, onUpdate, onDelete, onBulkDelete, onCopy }) {
                   </>
                 )}
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>

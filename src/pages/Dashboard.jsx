@@ -8,6 +8,21 @@ function Dashboard() {
   const { testCasesData, defectsData, modules } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState('tc');
 
+  const allRounds = new Set([1]);
+  Object.values(testCasesData).forEach(moduleData => {
+    Object.keys(moduleData).forEach(round => allRounds.add(Number(round)));
+  });
+  const availableRounds = Array.from(allRounds).sort((a, b) => a - b);
+  const maxRound = Math.max(...availableRounds);
+
+  const [selectedRound, setSelectedRound] = useState(maxRound);
+
+  React.useEffect(() => {
+    if (maxRound > selectedRound && !availableRounds.includes(selectedRound)) {
+       setSelectedRound(maxRound);
+    }
+  }, [maxRound, selectedRound, availableRounds]);
+
   const { dashboardStats, moduleStats, defectTotals, defectStatsByModule, defectSeverityData, defectStatusData, defectTrendData, depthTcStats, depthDefectStats } = useMemo(() => {
     const EXCLUDED_MODULES = ['SCREEN_RULE', 'Reference'];
     let totalTC = 0;
@@ -26,7 +41,8 @@ function Dashboard() {
     validModules.forEach(moduleName => {
       if (EXCLUDED_MODULES.includes(moduleName)) return;
 
-      const tcs = testCasesData[moduleName];
+      const moduleData = testCasesData[moduleName] || { 1: [] };
+      const tcs = moduleData[selectedRound] || [];
       const isCommonModule = moduleName === '공통TC' || moduleName === '공통';
       const moduleLabel = modules.find(m => m.id === moduleName)?.label || moduleName;
       
@@ -116,7 +132,9 @@ function Dashboard() {
     const tcToModule = {};
     const tcToDepth1 = {};
     Object.keys(testCasesData).forEach(mod => {
-      testCasesData[mod].forEach(tc => {
+      const moduleData = testCasesData[mod] || { 1: [] };
+      const tcs = moduleData[selectedRound] || [];
+      tcs.forEach(tc => {
         if (tc.tc_id) {
           tcToModule[tc.tc_id] = mod;
           tcToDepth1[tc.tc_id] = tc.depth1 || '미지정';
@@ -145,6 +163,8 @@ function Dashboard() {
     const depthDefectStatsMap = {};
 
     (defectsData || []).forEach(df => {
+      if ((df.round || 1) !== selectedRound) return;
+
       let assignedMod = tcToModule[df.tc_id];
       if (!assignedMod && df.defect_id) {
         const parts = df.defect_id.split('-');
@@ -253,11 +273,23 @@ function Dashboard() {
       depthTcStats: processedDepthTcStats,
       depthDefectStats: processedDepthDefectStats
     };
-  }, [testCasesData, defectsData, modules]);
+  }, [testCasesData, defectsData, modules, selectedRound]);
 
   return (
     <div className="dashboard animate-fade-in">
       <h2 className="page-title">QMS 통합 검증 대시보드</h2>
+
+      <div className="round-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+        {availableRounds.map(round => (
+          <button 
+            key={round}
+            onClick={() => setSelectedRound(round)}
+            style={{ padding: '6px 16px', background: selectedRound === round ? 'var(--primary)' : 'transparent', color: selectedRound === round ? 'white' : 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontWeight: selectedRound === round ? 'bold' : 'normal', fontSize: '14px' }}
+          >
+            {round}차 테스트
+          </button>
+        ))}
+      </div>
 
       <div className="dashboard-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border)' }}>
         <button 

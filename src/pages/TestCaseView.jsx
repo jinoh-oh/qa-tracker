@@ -9,7 +9,7 @@ import './TestCaseView.css';
 
 function TestCaseView() {
   const { moduleName } = useParams();
-  const { testCasesData, updateTestCase, addTestCase, deleteTestCase, bulkDeleteTestCases, appendTestCasesFromExcel, isReadOnly } = useContext(AppContext);
+  const { testCasesData, updateTestCase, addTestCase, deleteTestCase, bulkDeleteTestCases, appendTestCasesFromExcel, createNextRound, isReadOnly } = useContext(AppContext);
   const fileInputRef = useRef(null);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,7 +20,21 @@ function TestCaseView() {
     expected: '', comment: '', result: 'N/A', tester: '', date: '', defect_id: '', type: 'BIZ', common_tc_ref: ''
   });
 
-  const data = testCasesData[moduleName] || [];
+  const moduleData = testCasesData[moduleName] || { 1: [] };
+  const availableRounds = Object.keys(moduleData).map(Number).sort((a, b) => a - b);
+  const maxRound = availableRounds.length > 0 ? Math.max(...availableRounds) : 1;
+  
+  const [currentRound, setCurrentRound] = useState(maxRound);
+
+  React.useEffect(() => {
+    if (maxRound > currentRound && !availableRounds.includes(currentRound)) {
+       setCurrentRound(maxRound);
+    }
+  }, [maxRound, currentRound, availableRounds]);
+
+  const data = moduleData[currentRound] || [];
+  const previousRoundData = currentRound > 1 ? (moduleData[currentRound - 1] || []) : [];
+  const isReadOnlyRound = isReadOnly || currentRound < maxRound;
 
   const filteredData = React.useMemo(() => {
     if (!searchTerm.trim()) return data;
@@ -36,19 +50,19 @@ function TestCaseView() {
   }, [data, searchTerm]);
 
   const handleUpdate = (originalId, updatedTc) => {
-    updateTestCase(moduleName, originalId, updatedTc);
+    updateTestCase(moduleName, currentRound, originalId, updatedTc);
   };
 
   const handleDelete = (tcId) => {
-    deleteTestCase(moduleName, tcId);
+    deleteTestCase(moduleName, currentRound, tcId);
   };
 
   const handleBulkDelete = (tcIds) => {
-    bulkDeleteTestCases(moduleName, tcIds);
+    bulkDeleteTestCases(moduleName, currentRound, tcIds);
   };
 
   const handleCopy = (tc) => {
-    if (isReadOnly) return;
+    if (isReadOnlyRound) return;
     if (window.confirm(`[${tc.tc_id}] 케이스를 복제하시겠습니까?`)) {
       const baseId = tc.tc_id.split('_COPY')[0];
       const existingCopies = data.filter(item => item.tc_id && item.tc_id.startsWith(`${baseId}_COPY`));
@@ -59,7 +73,7 @@ function TestCaseView() {
         tc_id: `${baseId}${copySuffix}`,
         no: data.length + 1
       };
-      addTestCase(moduleName, copiedTc);
+      addTestCase(moduleName, currentRound, copiedTc);
     }
   };
 
@@ -168,7 +182,7 @@ function TestCaseView() {
           type: row['TC Type'] || 'BIZ',
           common_tc_ref: row['공통TC 참조'] || ''
         }));
-        appendTestCasesFromExcel(moduleName, mappedData);
+        appendTestCasesFromExcel(moduleName, currentRound, mappedData);
         alert(`${mappedData.length}개의 테스트 케이스가 성공적으로 추가되었습니다.`);
       }
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -195,7 +209,7 @@ function TestCaseView() {
       return;
     }
 
-    addTestCase(moduleName, newTc);
+    addTestCase(moduleName, currentRound, newTc);
     setIsModalOpen(false);
     setNewTcForm({ tc_id: '', depth1: '', depth2: '', depth3: '', depth4: '', scenario: '', priority: 'P2', precondition: '', procedure: '', expected: '', comment: '', result: 'N/A', tester: '', date: '', defect_id: '', type: 'BIZ', common_tc_ref: '' });
   };
@@ -224,7 +238,7 @@ function TestCaseView() {
             <FileOutput size={16} style={{marginRight: '6px'}} /> 내보내기
           </button>
 
-          {!isReadOnly && (
+          {!isReadOnlyRound && (
             <>
               <input 
                 type="file" 
@@ -246,14 +260,40 @@ function TestCaseView() {
       </div>
 
       <div className="card shadow-sm" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px' }}>
+        <div className="round-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+          {availableRounds.map(round => (
+            <button 
+              key={round}
+              onClick={() => setCurrentRound(round)}
+              style={{ padding: '6px 16px', background: currentRound === round ? 'var(--primary)' : 'transparent', color: currentRound === round ? 'white' : 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontWeight: currentRound === round ? 'bold' : 'normal', fontSize: '14px' }}
+            >
+              {round}차 테스트
+            </button>
+          ))}
+          {!isReadOnly && (
+            <button 
+              onClick={() => {
+                if (window.confirm(`${maxRound + 1}차 테스트를 생성하시겠습니까? ${maxRound}차 테스트의 데이터가 모두 복사됩니다.`)) {
+                  createNextRound(moduleName, maxRound);
+                  setCurrentRound(maxRound + 1);
+                }
+              }}
+              style={{ padding: '6px 16px', background: 'transparent', color: 'var(--primary)', border: '1px dashed var(--primary)', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}
+            >
+              + 차수 추가
+            </button>
+          )}
+        </div>
+
         <TestCaseTable 
           data={filteredData} 
+          previousRoundData={previousRoundData}
           onUpdate={handleUpdate} 
           onDelete={handleDelete}
           onBulkDelete={handleBulkDelete}
           onCopy={handleCopy}
-          isReadOnly={isReadOnly}
-          key={moduleName} 
+          isReadOnly={isReadOnlyRound}
+          key={`${moduleName}-${currentRound}`} 
         />
       </div>
 

@@ -6,9 +6,18 @@ import { Plus, Search } from 'lucide-react';
 // Reusing some base CSS from TestCaseView if applicable, or inline styling.
 
 function DefectTrackerView() {
-  const { defectsData, addDefect, updateDefect, deleteDefect, bulkDeleteDefects, isReadOnly } = useContext(AppContext);
+  const { testCasesData, defectsData, addDefect, updateDefect, deleteDefect, bulkDeleteDefects, isReadOnly } = useContext(AppContext);
   const [searchParams] = useSearchParams();
   const searchId = searchParams.get('defectId');
+
+  const allRounds = new Set([1]);
+  Object.values(testCasesData).forEach(moduleData => {
+    Object.keys(moduleData).forEach(round => allRounds.add(Number(round)));
+  });
+  const availableRounds = Array.from(allRounds).sort((a, b) => a - b);
+  const maxRound = Math.max(...availableRounds);
+
+  const [currentRound, setCurrentRound] = useState(maxRound);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newDfForm, setNewDfForm] = useState({
@@ -54,9 +63,10 @@ function DefectTrackerView() {
   };
 
   const filteredData = defectsData.filter(df => 
-    (df.defect_id && df.defect_id.toLowerCase().includes(filterText.toLowerCase())) ||
+    (df.round || 1) === currentRound &&
+    ((df.defect_id && df.defect_id.toLowerCase().includes(filterText.toLowerCase())) ||
     (df.tc_id && df.tc_id.toLowerCase().includes(filterText.toLowerCase())) ||
-    (df.title && df.title.toLowerCase().includes(filterText.toLowerCase()))
+    (df.title && df.title.toLowerCase().includes(filterText.toLowerCase())))
   );
 
   const handleAddSubmit = (e) => {
@@ -67,6 +77,7 @@ function DefectTrackerView() {
       _uid: `UID-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       no: defectsData.length + 1,
       ...newDfForm,
+      round: currentRound,
       defect_id: newDfForm.defect_id || defaultDfId
     };
 
@@ -78,7 +89,9 @@ function DefectTrackerView() {
   return (
     <div className="test-case-view animate-fade-in" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--background)' }}>
       <div className="view-header" style={{ flexShrink: 0, paddingBottom: '16px' }}>
-        <h2 className="view-title">Defect Tracker (결함 현황)</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <h2 className="view-title" style={{ margin: 0 }}>Defect Tracker (결함 현황)</h2>
+        </div>
         <div className="view-actions">
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <Search size={16} style={{ position: 'absolute', left: '10px', color: '#a0aec0' }} />
@@ -99,6 +112,17 @@ function DefectTrackerView() {
       </div>
 
       <div className="card shadow-sm" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px' }}>
+        <div className="round-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+          {availableRounds.map(round => (
+            <button 
+              key={round}
+              onClick={() => setCurrentRound(round)}
+              style={{ padding: '6px 16px', background: currentRound === round ? 'var(--primary)' : 'transparent', color: currentRound === round ? 'white' : 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontWeight: currentRound === round ? 'bold' : 'normal', fontSize: '14px' }}
+            >
+              {round}차 결함
+            </button>
+          ))}
+        </div>
         <DefectTable 
           data={filteredData} 
           onUpdate={handleUpdate} 

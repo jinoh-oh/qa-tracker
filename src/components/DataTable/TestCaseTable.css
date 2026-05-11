@@ -183,3 +183,6 @@
 
 .tc-table th.no-col, .tc-table td.no-col { text-align: center !important; }
 .tc-table th.tc-id-col, .tc-table td.tc-id-col { text-align: center !important; }
+
+.changed-value { background-color: #fefcbf; color: #975a16; font-weight: 500; border: 1px solid #ecc94b !important; }
+
